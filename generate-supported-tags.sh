@@ -33,11 +33,11 @@ function print_url() {
   local tags="$1"
   local commit="$2"
   local dist="$3"
-  local official="$4"
+  local legacy="$4"
 
   local url="[$tags](https://github.com/dstmodders/docker-imagemagick/blob/${commit}/latest/${dist}/Dockerfile)"
-  if [ "${official}" == 'true' ]; then
-    url="[$tags](https://github.com/dstmodders/docker-imagemagick/blob/${commit}/official/${dist}/Dockerfile)"
+  if [ "${legacy}" == 'true' ]; then
+    url="[$tags](https://github.com/dstmodders/docker-imagemagick/blob/${commit}/legacy/${dist}/Dockerfile)"
   fi
 
   echo "- ${url}"
@@ -69,7 +69,7 @@ for v in "${VERSIONS[@]}"; do
       tags="\`${tag_full}\`, \`${tag_version}\`, \`${tag_dist}\`"
       if [ "${latest}" == 'true' ]; then
         if [ "${legacy}" == 'true' ]; then
-          tags="${tags}, \`legacy\`"
+          tags="${tags}, \`legacy-latest\`, \`legacy\`"
         else
           tags="${tags}, \`latest\`"
         fi
@@ -78,6 +78,6 @@ for v in "${VERSIONS[@]}"; do
       tags="\`${tag_full}\`, \`${tag_dist}\`"
     fi
 
-    print_url "${tags}" "${commit}" "${dist}" "${official}"
+    print_url "${tags}" "${commit}" "${dist}" "${legacy}"
   done
 done
