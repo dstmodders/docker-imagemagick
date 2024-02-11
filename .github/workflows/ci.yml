@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  workflow_dispatch:
+
+env:
+  SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+  SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
+  SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        id: node
+        with:
+          node-version: 20.11.0
+      - name: Enable corepack
+        run: corepack enable
+      - name: Send Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' }}
+        id: slack
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            Node.js: ${{ steps.node.outputs.node-version }}
+            Prettier issues: Checking...
+          status: in-progress
+      - name: Install Prettier
+        run: yarn global add prettier
+      - name: Lint
+        id: lint
+        run: |
+          export_output() {
+            env=${1^^}
+            env=${env//-/_}
+            export "$env=$2"
+            echo "export $env=$2"
+            echo "$1=$2" >> $GITHUB_OUTPUT
+          }
+
+          # output
+          export_output 'prettier-issues' "$(prettier --list-different . | wc -l)"
+
+          # lint
+          echo '---'
+          prettier --check . || true
+
+          # status
+          if [ "$PRETTIER_ISSUES" -eq 0 ]; then exit 0; else exit 1; fi
+      - name: Update Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' && always() }}
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            Node.js: ${{ steps.node.outputs.node-version }}
+            Prettier issues: ${{ steps.lint.outputs.prettier-issues || 'Skipped' }}
+          status: ${{ job.status }}
+          timestamp: ${{ steps.slack.outputs.slack-timestamp }}
