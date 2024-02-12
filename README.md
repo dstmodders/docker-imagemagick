@@ -5,12 +5,14 @@
 [![CI]](https://github.com/dstmodders/docker-imagemagick/actions/workflows/ci.yml)
 [![Build]](https://github.com/dstmodders/docker-imagemagick/actions/workflows/build.yml)
 
+![ImageMagick Logo](./logo.png)
+
 ## Supported tags and respective `Dockerfile` links
 
-- [`7.1.1-27-alpine`, `7.1.1-27`, `alpine`, `latest`](https://github.com/dstmodders/docker-imagemagick/blob/46a055f429eb188c6a4349b00a9fe46895645198/latest/alpine/Dockerfile)
-- [`7.1.1-27-debian`, `debian`](https://github.com/dstmodders/docker-imagemagick/blob/46a055f429eb188c6a4349b00a9fe46895645198/latest/debian/Dockerfile)
-- [`legacy-6.9.13-5-alpine`, `legacy-6.9.13-5`, `legacy-alpine`, `legacy-latest`, `legacy`](https://github.com/dstmodders/docker-imagemagick/blob/46a055f429eb188c6a4349b00a9fe46895645198/legacy/alpine/Dockerfile)
-- [`legacy-6.9.13-5-debian`, `legacy-debian`](https://github.com/dstmodders/docker-imagemagick/blob/46a055f429eb188c6a4349b00a9fe46895645198/legacy/debian/Dockerfile)
+- [`7.1.1-28-alpine`, `7.1.1-28`, `alpine`, `latest`](https://github.com/dstmodders/docker-imagemagick/blob/a0924f6ecdb7ecfbf4d3cb111f655169655da212/latest/alpine/Dockerfile)
+- [`7.1.1-28-debian`, `debian`](https://github.com/dstmodders/docker-imagemagick/blob/a0924f6ecdb7ecfbf4d3cb111f655169655da212/latest/debian/Dockerfile)
+- [`legacy-6.9.13-6-alpine`, `legacy-6.9.13-6`, `legacy-alpine`, `legacy-latest`, `legacy`](https://github.com/dstmodders/docker-imagemagick/blob/a0924f6ecdb7ecfbf4d3cb111f655169655da212/legacy/alpine/Dockerfile)
+- [`legacy-6.9.13-6-debian`, `legacy-debian`](https://github.com/dstmodders/docker-imagemagick/blob/a0924f6ecdb7ecfbf4d3cb111f655169655da212/legacy/debian/Dockerfile)
 
 ## Overview
 
@@ -28,20 +30,24 @@ However, you can use them directly as well.
 
 | Name                  | Value      | Description           |
 | --------------------- | ---------- | --------------------- |
-| `IMAGEMAGICK_VERSION` | `7.1.1-27` | [ImageMagick] version |
+| `IMAGEMAGICK_VERSION` | `7.1.1-28` | [ImageMagick] version |
 
 ## Usage
 
 For the latest [ImageMagick 7]:
 
 ```shell
-$ docker pull dstmodders/imagemagick
+$ docker pull dstmodders/imagemagick:latest
+# or
+$ docker pull ghcr.io/dstmodders/imagemagick:latest
 ```
 
 For the latest legacy [ImageMagick 6]:
 
 ```shell
 $ docker pull dstmodders/imagemagick:legacy
+# or
+$ docker pull ghcr.io/dstmodders/imagemagick:legacy
 ```
 
 See [tags] for a list of all available versions.
