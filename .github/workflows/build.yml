@@ -92,7 +92,7 @@ jobs:
           context: .
           file: ${{ matrix.image.root }}/debian/Dockerfile
           labels: ${{ steps.debian-meta.outputs.labels }}
-          platforms: linux/amd64,linux/386
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
           pull: true
           push: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.debian-meta.outputs.tags }}
@@ -124,7 +124,7 @@ jobs:
           context: .
           file: ${{ matrix.image.root }}/alpine/Dockerfile
           labels: ${{ steps.alpine-meta.outputs.labels }}
-          platforms: linux/amd64,linux/386
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
           pull: true
           push: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
           tags: ${{ steps.alpine-meta.outputs.tags }}

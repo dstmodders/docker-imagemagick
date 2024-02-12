@@ -89,10 +89,10 @@ $ docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 Respectively, to build multi-platform images locally:
 
 ```shell
-$ docker buildx build ./latest/alpine/ --platform='linux/amd64,linux/386' --tag='dstmodders/imagemagick:alpine'
-$ docker buildx build ./latest/debian/ --platform='linux/amd64,linux/386' --tag='dstmodders/imagemagick:debian'
-$ docker buildx build ./legacy/alpine/ --platform='linux/amd64,linux/386' --tag='dstmodders/imagemagick:legacy-alpine'
-$ docker buildx build ./legacy/debian/ --platform='linux/amd64,linux/386' --tag='dstmodders/imagemagick:legacy-debian'
+$ docker buildx build ./latest/alpine/ --platform='linux/amd64,linux/386,linux/arm64,linux/arm/v7' --tag='dstmodders/imagemagick:alpine'
+$ docker buildx build ./latest/debian/ --platform='linux/amd64,linux/386,linux/arm64,linux/arm/v7' --tag='dstmodders/imagemagick:debian'
+$ docker buildx build ./legacy/alpine/ --platform='linux/amd64,linux/386,linux/arm64,linux/arm/v7' --tag='dstmodders/imagemagick:legacy-alpine'
+$ docker buildx build ./legacy/debian/ --platform='linux/amd64,linux/386,linux/arm64,linux/arm/v7' --tag='dstmodders/imagemagick:legacy-debian'
 ```
 
 ## License
