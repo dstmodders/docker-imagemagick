@@ -30,7 +30,7 @@ However, you can use them directly as well.
 
 | Name                  | Value      | Description           |
 | --------------------- | ---------- | --------------------- |
-| `IMAGEMAGICK_VERSION` | `7.1.1-28` | [ImageMagick] version |
+| `IMAGEMAGICK_VERSION` | `7.1.1-29` | [ImageMagick] version |
 
 ## Usage
 
