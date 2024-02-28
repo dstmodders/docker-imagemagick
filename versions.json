@@ -1,6 +1,6 @@
 [
   {
-    "version": "6.9.13-6",
+    "version": "6.9.13-7",
     "legacy": true,
     "latest": true,
     "root": "./legacy"
