@@ -31,7 +31,7 @@ cd "$BASE_DIR" || exit 1
 printf "## Supported tags and respective \`Dockerfile\` links\n\n"
 
 # reference:
-#   7.1.1-29-alpine, 7.1.1-29, alpine, latest
+#   7.1.1-30-alpine, 7.1.1-30, alpine, latest
 #   legacy-6.9.13-8-alpine, legacy-6.9.13-8, legacy-alpine, legacy-latest, legacy
 for key in "${VERSIONS_KEYS[@]}"; do
   for dist in "${DISTS[@]}"; do

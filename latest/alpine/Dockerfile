@@ -2,7 +2,7 @@ FROM alpine:3.19.1
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
-ARG IMAGEMAGICK_VERSION="7.1.1-29"
+ARG IMAGEMAGICK_VERSION="7.1.1-30"
 ENV IMAGEMAGICK_VERSION="${IMAGEMAGICK_VERSION}"
 
 # hadolint ignore=DL3003

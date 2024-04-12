@@ -6,7 +6,7 @@
     "root": "./legacy"
   },
   {
-    "version": "7.1.1-29",
+    "version": "7.1.1-30",
     "latest": true,
     "root": "./latest"
   }
