@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - .github/workflows/update.yml
       - DOCKERHUB.md
   workflow_dispatch:
 

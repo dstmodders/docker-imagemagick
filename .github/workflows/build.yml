@@ -8,6 +8,7 @@ on:
     paths:
       - 'latest/**'
       - 'legacy/**'
+      - .github/workflows/build.yml
       - versions.json
   workflow_dispatch:
 
