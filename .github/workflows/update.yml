@@ -66,8 +66,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          repository: ${{ github.repository_owner }}/terraria-server
-          short-description: Dockerized Terraria official and TShock servers.
+          repository: ${{ github.repository_owner }}/imagemagick
+          short-description: ${{ steps.github.outputs.description }}
           readme-filepath: ./DOCKERHUB.md
       - name: Update Slack notification
         uses: codedsolar/slack-action@v1
