@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
-COMMIT_ID=$(git rev-parse --verify HEAD)
+COMMIT_ID="$(git rev-parse --verify HEAD)"
 DISTS=('alpine' 'debian')
 JSON="$(cat ./versions.json)"
 REPOSITORY='https://github.com/dstmodders/docker-imagemagick'
@@ -35,9 +35,9 @@ printf "## Supported tags and respective \`Dockerfile\` links\n\n"
 #   legacy-6.9.13-8-alpine, legacy-6.9.13-8, legacy-alpine, legacy-latest, legacy
 for key in "${VERSIONS_KEYS[@]}"; do
   for dist in "${DISTS[@]}"; do
-    version=$(jq -r ".[$key] | .version" <<< "$JSON")
-    latest=$(jq -r ".[$key].latest" <<< "$JSON")
-    legacy=$(jq -r ".[$key].legacy" <<< "$JSON")
+    version="$(jq -r ".[$key] | .version" <<< "$JSON")"
+    latest="$(jq -r ".[$key].latest" <<< "$JSON")"
+    legacy="$(jq -r ".[$key].legacy" <<< "$JSON")"
 
     tag_dist="$dist"
     tag_full="$version-$dist"
