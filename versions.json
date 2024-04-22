@@ -1,13 +1,14 @@
-[
-  {
-    "version": "6.9.13-8",
-    "legacy": true,
-    "latest": true,
-    "root": "./legacy"
-  },
-  {
-    "version": "7.1.1-30",
-    "latest": true,
-    "root": "./latest"
-  }
-]
+{
+  "latest": [
+    {
+      "version": "7.1.1-30",
+      "latest": true
+    }
+  ],
+  "legacy": [
+    {
+      "version": "6.9.13-8",
+      "latest": true
+    }
+  ]
+}

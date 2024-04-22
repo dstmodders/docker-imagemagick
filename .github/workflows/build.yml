@@ -21,7 +21,8 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      latest: ${{ steps.set-matrix.outputs.latest }}
+      legacy: ${{ steps.set-matrix.outputs.legacy }}
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -29,15 +30,16 @@ jobs:
         id: set-matrix
         run: |
           JSON=$(cat ./versions.json)
-          echo "matrix=$(jq -cM . <<< ${JSON})" >> $GITHUB_OUTPUT
+          echo "latest=$(jq -cM .latest <<< $JSON)" >> $GITHUB_OUTPUT
+          echo "legacy=$(jq -cM .legacy <<< $JSON)" >> $GITHUB_OUTPUT
 
-  image:
+  legacy:
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
       max-parallel: 1
       matrix:
-        image: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+        image: ${{ fromJSON(needs.prepare.outputs.legacy) }}
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -72,13 +74,11 @@ jobs:
         uses: docker/metadata-action@v5
         id: debian-meta
         with:
-          flavor: |
-            prefix=${{ matrix.image.legacy && 'legacy-' || '' }},onlatest=${{ matrix.image.legacy || 'false' }}
+          flavor: prefix=legacy-,onlatest=true
           images: |
             ${{ github.repository_owner }}/imagemagick
             ghcr.io/${{ github.repository_owner }}/imagemagick
-          labels: |
-            maintainer=victor@popkov.me
+          labels: maintainer=victor@popkov.me
           tags: |
             type=raw,value=${{ matrix.image.version }}-debian
             ${{ matrix.image.latest && 'type=raw,value=debian' || '' }}
@@ -88,10 +88,10 @@ jobs:
         with:
           build-args: |
             IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:${{ matrix.image.legacy && 'legacy-' || '' }}${{ matrix.image.version }}-debian
+          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:legacy-${{ matrix.image.version }}-debian
           cache-to: type=inline
           context: .
-          file: ${{ matrix.image.root }}/debian/Dockerfile
+          file: ./legacy/debian/Dockerfile
           labels: ${{ steps.debian-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
           pull: true
@@ -106,24 +106,125 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/imagemagick
           flavor: |
             latest=${{ matrix.image.latest || 'false' }}
-            prefix=${{ matrix.image.legacy && 'legacy-' || '' }},onlatest=${{ matrix.image.legacy || 'false' }}
-          labels: |
-            maintainer=victor@popkov.me
+            prefix=legacy-,onlatest=true
+          labels: maintainer=victor@popkov.me
           tags: |
-            type=raw,value=${{ matrix.image.version }}
             type=raw,value=${{ matrix.image.version }}-alpine
+            type=raw,value=${{ matrix.image.version }}
             ${{ matrix.image.latest && 'type=raw,value=alpine' || '' }}
-            ${{ (matrix.image.latest && matrix.image.legacy) && 'type=raw,prefix=,suffix=,value=legacy' || '' }}
+            ${{ matrix.image.latest && 'type=raw,prefix=,value=legacy' || '' }}
       - name: Build an Alpine image
         uses: docker/build-push-action@v5
         id: alpine
         with:
           build-args: |
             IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:${{ matrix.image.legacy && 'legacy-' || '' }}${{ matrix.image.version }}-alpine
+          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:legacy-${{ matrix.image.version }}-alpine
           cache-to: type=inline
           context: .
-          file: ${{ matrix.image.root }}/alpine/Dockerfile
+          file: ./legacy/alpine/Dockerfile
+          labels: ${{ steps.alpine-meta.outputs.labels }}
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          pull: true
+          push: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.alpine-meta.outputs.tags }}
+      - name: Update Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' && always() }}
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            ImageMagick version: ${{ matrix.image.version }}
+          status: ${{ job.status }}
+          timestamp: ${{ steps.slack.outputs.slack-timestamp }}
+
+  latest:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        image: ${{ fromJSON(needs.prepare.outputs.latest) }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+      - name: Send Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' }}
+        id: slack
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            ImageMagick version: ${{ matrix.image.version }}
+          status: in-progress
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        if: ${{ github.event_name != 'pull_request' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+      - name: Prepare Docker meta for a Debian image
+        uses: docker/metadata-action@v5
+        id: debian-meta
+        with:
+          images: |
+            ${{ github.repository_owner }}/imagemagick
+            ghcr.io/${{ github.repository_owner }}/imagemagick
+          labels: maintainer=victor@popkov.me
+          tags: |
+            type=raw,value=${{ matrix.image.version }}-debian
+            ${{ matrix.image.latest && 'type=raw,value=debian' || '' }}
+      - name: Build a Debian image
+        uses: docker/build-push-action@v5
+        id: debian
+        with:
+          build-args: |
+            IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:${{ matrix.image.version }}-debian
+          cache-to: type=inline
+          context: .
+          file: ./latest/debian/Dockerfile
+          labels: ${{ steps.debian-meta.outputs.labels }}
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          pull: true
+          push: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
+          tags: ${{ steps.debian-meta.outputs.tags }}
+      - name: Prepare Docker meta for an Alpine image
+        uses: docker/metadata-action@v5
+        id: alpine-meta
+        with:
+          images: |
+            ${{ github.repository_owner }}/imagemagick
+            ghcr.io/${{ github.repository_owner }}/imagemagick
+          flavor: latest=${{ matrix.image.latest || 'false' }}
+          labels: maintainer=victor@popkov.me
+          tags: |
+            type=raw,value=${{ matrix.image.version }}-alpine
+            type=raw,value=${{ matrix.image.version }}
+            ${{ matrix.image.latest && 'type=raw,value=alpine' || '' }}
+      - name: Build an Alpine image
+        uses: docker/build-push-action@v5
+        id: alpine
+        with:
+          build-args: |
+            IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:${{ matrix.image.version }}-alpine
+          cache-to: type=inline
+          context: .
+          file: ./latest/alpine/Dockerfile
           labels: ${{ steps.alpine-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
           pull: true
