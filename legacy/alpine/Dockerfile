@@ -7,7 +7,7 @@ ENV IMAGEMAGICK_VERSION="${IMAGEMAGICK_VERSION}"
 
 # hadolint ignore=DL3003
 RUN addgroup -g 1000 imagemagick \
-  && adduser -u 1000 -G imagemagick -s /bin/sh -D imagemagick \
+  && adduser -u 1000 -G imagemagick -s /bin/sh -D --no-create-home imagemagick \
   && apk add --no-cache \
     libgcc='13.2.1_git20231014-r0' \
     libgomp='13.2.1_git20231014-r0' \
@@ -30,7 +30,7 @@ RUN addgroup -g 1000 imagemagick \
   && ldconfig /usr/local/lib/ \
   # clean
   && apk del .imagemagick-deps \
-  && rm -Rf /tmp/* \
+  && rm -rf /tmp/* \
   # smoke test
   && identify -version
 

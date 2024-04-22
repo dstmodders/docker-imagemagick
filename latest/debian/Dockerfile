@@ -7,7 +7,7 @@ ENV IMAGEMAGICK_VERSION="${IMAGEMAGICK_VERSION}"
 
 # hadolint ignore=DL3003
 RUN groupadd --gid 1000 imagemagick \
-  && useradd --uid 1000 --gid imagemagick --shell /bin/bash --create-home imagemagick \
+  && useradd --uid 1000 --gid imagemagick --shell /bin/bash --no-create-home imagemagick \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
     build-essential='12.9' \
@@ -33,7 +33,7 @@ RUN groupadd --gid 1000 imagemagick \
     pkg-config \
   && apt-get clean \
   && apt-get autoremove -y \
-  && rm -Rf \
+  && rm -rf \
     /etc/ca-certificates.conf \
     /etc/ssl/ \
     /etc/wgetrc \
