@@ -13,6 +13,7 @@ on:
   workflow_dispatch:
 
 env:
+  DOCKERHUB_REPOSITORY: ${{ github.repository_owner }}/imagemagick
   SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
   SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
   SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
@@ -61,8 +62,8 @@ jobs:
         uses: docker/login-action@v3
         if: ${{ github.event_name != 'pull_request' }}
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GHCR
         uses: docker/login-action@v3
         if: ${{ github.event_name != 'pull_request' }}
@@ -76,8 +77,8 @@ jobs:
         with:
           flavor: prefix=legacy-,onlatest=true
           images: |
-            ${{ github.repository_owner }}/imagemagick
-            ghcr.io/${{ github.repository_owner }}/imagemagick
+            ${{ env.DOCKERHUB_REPOSITORY }}
+            ghcr.io/${{ env.DOCKERHUB_REPOSITORY }}
           labels: maintainer=victor@popkov.me
           tags: |
             type=raw,value=${{ matrix.image.version }}-debian
@@ -88,7 +89,7 @@ jobs:
         with:
           build-args: |
             IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:legacy-${{ matrix.image.version }}-debian
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPOSITORY }}:legacy-${{ matrix.image.version }}-debian
           cache-to: type=inline
           context: .
           file: ./legacy/debian/Dockerfile
@@ -102,8 +103,8 @@ jobs:
         id: alpine-meta
         with:
           images: |
-            ${{ github.repository_owner }}/imagemagick
-            ghcr.io/${{ github.repository_owner }}/imagemagick
+            ${{ env.DOCKERHUB_REPOSITORY }}
+            ghcr.io/${{ env.DOCKERHUB_REPOSITORY }}
           flavor: |
             latest=${{ matrix.image.latest || 'false' }}
             prefix=legacy-,onlatest=true
@@ -119,7 +120,7 @@ jobs:
         with:
           build-args: |
             IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:legacy-${{ matrix.image.version }}-alpine
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPOSITORY }}:legacy-${{ matrix.image.version }}-alpine
           cache-to: type=inline
           context: .
           file: ./legacy/alpine/Dockerfile
@@ -167,8 +168,8 @@ jobs:
         uses: docker/login-action@v3
         if: ${{ github.event_name != 'pull_request' }}
         with:
-          username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GHCR
         uses: docker/login-action@v3
         if: ${{ github.event_name != 'pull_request' }}
@@ -181,8 +182,8 @@ jobs:
         id: debian-meta
         with:
           images: |
-            ${{ github.repository_owner }}/imagemagick
-            ghcr.io/${{ github.repository_owner }}/imagemagick
+            ${{ env.DOCKERHUB_REPOSITORY }}
+            ghcr.io/${{ env.DOCKERHUB_REPOSITORY }}
           labels: maintainer=victor@popkov.me
           tags: |
             type=raw,value=${{ matrix.image.version }}-debian
@@ -193,7 +194,7 @@ jobs:
         with:
           build-args: |
             IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:${{ matrix.image.version }}-debian
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPOSITORY }}:${{ matrix.image.version }}-debian
           cache-to: type=inline
           context: .
           file: ./latest/debian/Dockerfile
@@ -207,8 +208,8 @@ jobs:
         id: alpine-meta
         with:
           images: |
-            ${{ github.repository_owner }}/imagemagick
-            ghcr.io/${{ github.repository_owner }}/imagemagick
+            ${{ env.DOCKERHUB_REPOSITORY }}
+            ghcr.io/${{ env.DOCKERHUB_REPOSITORY }}
           flavor: latest=${{ matrix.image.latest || 'false' }}
           labels: maintainer=victor@popkov.me
           tags: |
@@ -221,7 +222,7 @@ jobs:
         with:
           build-args: |
             IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ github.repository_owner }}/imagemagick:${{ matrix.image.version }}-alpine
+          cache-from: type=registry,ref=${{ env.DOCKERHUB_REPOSITORY }}:${{ matrix.image.version }}-alpine
           cache-to: type=inline
           context: .
           file: ./latest/alpine/Dockerfile
