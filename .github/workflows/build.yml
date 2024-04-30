@@ -31,8 +31,10 @@ jobs:
         id: set-matrix
         run: |
           JSON=$(cat ./versions.json)
-          echo "latest=$(jq -cM .latest <<< $JSON)" >> $GITHUB_OUTPUT
-          echo "legacy=$(jq -cM .legacy <<< $JSON)" >> $GITHUB_OUTPUT
+          {
+            echo "latest=$(jq -cM .latest <<< "$JSON")"
+            echo "legacy=$(jq -cM .legacy <<< "$JSON")"
+          } >> "$GITHUB_OUTPUT"
 
   legacy:
     needs: prepare
@@ -87,8 +89,7 @@ jobs:
         uses: docker/build-push-action@v5
         id: debian
         with:
-          build-args: |
-            IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           cache-from: type=registry,ref=${{ env.DOCKERHUB_REPOSITORY }}:legacy-${{ matrix.image.version }}-debian
           cache-to: type=inline
           context: .
@@ -118,8 +119,7 @@ jobs:
         uses: docker/build-push-action@v5
         id: alpine
         with:
-          build-args: |
-            IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           cache-from: type=registry,ref=${{ env.DOCKERHUB_REPOSITORY }}:legacy-${{ matrix.image.version }}-alpine
           cache-to: type=inline
           context: .
@@ -192,8 +192,7 @@ jobs:
         uses: docker/build-push-action@v5
         id: debian
         with:
-          build-args: |
-            IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           cache-from: type=registry,ref=${{ env.DOCKERHUB_REPOSITORY }}:${{ matrix.image.version }}-debian
           cache-to: type=inline
           context: .
@@ -220,8 +219,7 @@ jobs:
         uses: docker/build-push-action@v5
         id: alpine
         with:
-          build-args: |
-            IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           cache-from: type=registry,ref=${{ env.DOCKERHUB_REPOSITORY }}:${{ matrix.image.version }}-alpine
           cache-to: type=inline
           context: .
