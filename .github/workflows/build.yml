@@ -103,6 +103,9 @@ jobs:
         with:
           path: /tmp/.buildx-debian-cache
           key: ${{ format('legacy-{0}-debian-{1}', matrix.image.version, steps.general.outputs.dockerfiles_version_short) }}
+          restore-keys: |
+            legacy-${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles_version_short }}
+            legacy-${{ matrix.image.version }}-debian-
       - name: Build a Debian image
         uses: docker/build-push-action@v5
         id: debian
@@ -138,6 +141,9 @@ jobs:
         with:
           path: /tmp/.buildx-alpine-cache
           key: ${{ format('legacy-{0}-alpine-{1}', matrix.image.version, steps.general.outputs.dockerfiles_version_short) }}
+          restore-keys: |
+            legacy-${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles_version_short }}
+            legacy-${{ matrix.image.version }}-alpine-
       - name: Build an Alpine image
         uses: docker/build-push-action@v5
         id: alpine
@@ -234,6 +240,9 @@ jobs:
         with:
           path: /tmp/.buildx-debian-cache
           key: ${{ format('{0}-debian-{1}', matrix.image.version, steps.general.outputs.dockerfiles_version_short) }}
+          restore-keys: |
+            ${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles_version_short }}
+            ${{ matrix.image.version }}-debian-
       - name: Build a Debian image
         uses: docker/build-push-action@v5
         id: debian
@@ -266,6 +275,9 @@ jobs:
         with:
           path: /tmp/.buildx-alpine-cache
           key: ${{ format('{0}-alpine-{1}', matrix.image.version, steps.general.outputs.dockerfiles_version_short) }}
+          restore-keys: |
+            ${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles_version_short }}
+            ${{ matrix.image.version }}-alpine-
       - name: Build an Alpine image
         uses: docker/build-push-action@v5
         id: alpine
