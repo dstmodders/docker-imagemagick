@@ -30,10 +30,10 @@ jobs:
       - name: Set matrix
         id: set-matrix
         run: |
-          JSON=$(cat ./versions.json)
+          json="$(cat ./versions.json)"
           {
-            echo "latest=$(jq -cM .latest <<< "$JSON")"
-            echo "legacy=$(jq -cM .legacy <<< "$JSON")"
+            echo "latest=$(jq -cM .latest <<< "$json")"
+            echo "legacy=$(jq -cM .legacy <<< "$json")"
           } >> "$GITHUB_OUTPUT"
 
   legacy:
@@ -49,15 +49,15 @@ jobs:
       - name: Set general outputs
         id: general
         run: |
-          dockerfiles_version="$(echo '${{ hashFiles('legacy/**/Dockerfile') }}')"
+          dockerfiles_version='${{ hashFiles('legacy/**/Dockerfile') }}'
           dockerfiles_version_short="$(echo "$dockerfiles_version" | cut -c 1-7)"
 
           echo "Dockerfiles version: $dockerfiles_version"
           echo "Dockerfiles version (short): $dockerfiles_version_short"
 
           {
-            echo "dockerfiles_version=$dockerfiles_version"
-            echo "dockerfiles_version_short=$dockerfiles_version_short"
+            echo "dockerfiles-version=$dockerfiles_version"
+            echo "dockerfiles-version-short=$dockerfiles_version_short"
           } >> "$GITHUB_OUTPUT"
       - name: Send Slack notification
         uses: codedsolar/slack-action@v1
@@ -102,9 +102,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-debian-cache
-          key: ${{ format('legacy-{0}-debian-{1}', matrix.image.version, steps.general.outputs.dockerfiles_version_short) }}
+          key: ${{ format('legacy-{0}-debian-{1}', matrix.image.version, steps.general.outputs.dockerfiles-version-short) }}
           restore-keys: |
-            legacy-${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles_version_short }}
+            legacy-${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles-version-short }}
             legacy-${{ matrix.image.version }}-debian-
       - name: Build a Debian image
         uses: docker/build-push-action@v5
@@ -140,9 +140,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-alpine-cache
-          key: ${{ format('legacy-{0}-alpine-{1}', matrix.image.version, steps.general.outputs.dockerfiles_version_short) }}
+          key: ${{ format('legacy-{0}-alpine-{1}', matrix.image.version, steps.general.outputs.dockerfiles-version-short) }}
           restore-keys: |
-            legacy-${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles_version_short }}
+            legacy-${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles-version-short }}
             legacy-${{ matrix.image.version }}-alpine-
       - name: Build an Alpine image
         uses: docker/build-push-action@v5
@@ -187,15 +187,15 @@ jobs:
       - name: Set general outputs
         id: general
         run: |
-          dockerfiles_version="$(echo '${{ hashFiles('latest/**/Dockerfile') }}')"
+          dockerfiles_version='${{ hashFiles('latest/**/Dockerfile') }}'
           dockerfiles_version_short="$(echo "$dockerfiles_version" | cut -c 1-7)"
 
           echo "Dockerfiles version: $dockerfiles_version"
           echo "Dockerfiles version (short): $dockerfiles_version_short"
 
           {
-            echo "dockerfiles_version=$dockerfiles_version"
-            echo "dockerfiles_version_short=$dockerfiles_version_short"
+            echo "dockerfiles-version=$dockerfiles_version"
+            echo "dockerfiles-version-short=$dockerfiles_version_short"
           } >> "$GITHUB_OUTPUT"
       - name: Send Slack notification
         uses: codedsolar/slack-action@v1
@@ -239,9 +239,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-debian-cache
-          key: ${{ format('{0}-debian-{1}', matrix.image.version, steps.general.outputs.dockerfiles_version_short) }}
+          key: ${{ format('{0}-debian-{1}', matrix.image.version, steps.general.outputs.dockerfiles-version-short) }}
           restore-keys: |
-            ${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles_version_short }}
+            ${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles-version-short }}
             ${{ matrix.image.version }}-debian-
       - name: Build a Debian image
         uses: docker/build-push-action@v5
@@ -274,9 +274,9 @@ jobs:
         uses: actions/cache@v4
         with:
           path: /tmp/.buildx-alpine-cache
-          key: ${{ format('{0}-alpine-{1}', matrix.image.version, steps.general.outputs.dockerfiles_version_short) }}
+          key: ${{ format('{0}-alpine-{1}', matrix.image.version, steps.general.outputs.dockerfiles-version-short) }}
           restore-keys: |
-            ${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles_version_short }}
+            ${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles-version-short }}
             ${{ matrix.image.version }}-alpine-
       - name: Build an Alpine image
         uses: docker/build-push-action@v5
