@@ -60,7 +60,7 @@ for key in "${LATEST_VERSIONS_KEYS[@]}"; do
   done
 done
 
-# reference: legacy-6.9.13-10-alpine, legacy-6.9.13-10, legacy-alpine, legacy-latest, legacy
+# reference: legacy-6.9.13-11-alpine, legacy-6.9.13-11, legacy-alpine, legacy-latest, legacy
 for key in "${LEGACY_VERSIONS_KEYS[@]}"; do
   for dist in "${DISTS[@]}"; do
     version="$(jq -r ".legacy | .[$key] | .version" <<< "$JSON")"
