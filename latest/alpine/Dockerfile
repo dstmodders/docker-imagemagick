@@ -17,7 +17,7 @@ RUN addgroup -g 1000 imagemagick \
   && apk add --no-cache --virtual .imagemagick-deps \
     cmake='3.27.8-r0' \
     g++='13.2.1_git20231014-r0' \
-    git='2.43.0-r0' \
+    git='2.43.4-r0' \
     libc-dev='0.7.2-r5' \
     make='4.4.1-r2' \
   # ImageMagick
