@@ -24,7 +24,7 @@ readonly LATEST_VERSIONS_KEYS
 readonly LEGACY_VERSIONS_KEYS
 readonly REPOSITORY
 
-function print_url() {
+print_url() {
   local tags="$1"
   local commit="$2"
   local directory="$3"
