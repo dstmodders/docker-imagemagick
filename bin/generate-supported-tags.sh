@@ -8,13 +8,13 @@ LATEST_VERSIONS_KEYS=()
 LEGACY_VERSIONS_KEYS=()
 REPOSITORY='https://github.com/dstmodders/docker-imagemagick'
 
-mapfile -t LATEST_VERSIONS_KEYS < <(jq -r '.latest | keys[]' <<< "$JSON")
-# shellcheck disable=SC2207
-IFS=$'\n' LATEST_VERSIONS_KEYS=($(sort -rV <<< "${LATEST_VERSIONS_KEYS[*]}")); unset IFS
+extract_and_sort_keys() {
+  local key_path="$1"
+  jq -r "$key_path | keys[]" <<< "$JSON" | sort -rV
+}
 
-mapfile -t LEGACY_VERSIONS_KEYS < <(jq -r '.legacy | keys[]' <<< "$JSON")
-# shellcheck disable=SC2207
-IFS=$'\n' LEGACY_VERSIONS_KEYS=($(sort -rV <<< "${LEGACY_VERSIONS_KEYS[*]}")); unset IFS
+mapfile -t LATEST_VERSIONS_KEYS < <(extract_and_sort_keys '.latest')
+mapfile -t LEGACY_VERSIONS_KEYS < <(extract_and_sort_keys '.legacy')
 
 readonly BASE_DIR
 readonly COMMIT_ID
