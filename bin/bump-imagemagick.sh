@@ -47,21 +47,22 @@ print_error() {
 }
 
 summary() {
-  local name="$1"
+  local dir="$1"
   local old_version="$2"
   local new_version="$3"
   local files=(
+    "$dir/alpine/Dockerfile"
+    "$dir/debian/Dockerfile"
     'DOCKERHUB.md'
     'README.md'
     'bin/generate-supported-tags.sh'
-    "$name/alpine/Dockerfile"
-    "$name/debian/Dockerfile"
     'versions.json'
   )
 
   print_bold '[FILES]'
   printf '\n\n'
-  for file in "${files[@]}"; do
+  mapfile -t sorted_files < <(printf "%s\n" "${files[@]}" | LC_ALL=C sort)
+  for file in "${sorted_files[@]}"; do
     echo "$file"
   done
 
@@ -74,7 +75,7 @@ summary() {
 }
 
 replace() {
-  local name="$1"
+  local dir="$1"
   local old_version="$2"
   local new_version="$3"
 
@@ -83,8 +84,8 @@ replace() {
   sed -i "$README_START_LINE,\$s/\`$old_version\`/\`$new_version\`/g" ./README.md
   sed -i "s/\"$old_version\"/\"$new_version\"/" ./versions.json
   sed -i "/^# reference:/s/$old_version/$new_version/g" ./bin/generate-supported-tags.sh
-  sed -i "s/^ARG IMAGEMAGICK_VERSION=\"$old_version\"$/ARG IMAGEMAGICK_VERSION=\"$new_version\"/" "./$name/alpine/Dockerfile"
-  sed -i "s/^ARG IMAGEMAGICK_VERSION=\"$old_version\"$/ARG IMAGEMAGICK_VERSION=\"$new_version\"/" "./$name/debian/Dockerfile"
+  sed -i "s/^ARG IMAGEMAGICK_VERSION=\"$old_version\"$/ARG IMAGEMAGICK_VERSION=\"$new_version\"/" "./$dir/alpine/Dockerfile"
+  sed -i "s/^ARG IMAGEMAGICK_VERSION=\"$old_version\"$/ARG IMAGEMAGICK_VERSION=\"$new_version\"/" "./$dir/debian/Dockerfile"
   printf ' Done\n'
 }
 
@@ -125,7 +126,7 @@ if [ -z "$name" ]; then
   echo 'Choose bump option:'
   options=('latest' 'legacy')
   select opt in "${options[@]}"; do
-    case $opt in
+    case "$opt" in
       latest) name='latest'; break ;;
       legacy) name='legacy'; break ;;
       *) print_error 'unrecognized option (choose number 1 or 2)' ;;
@@ -147,13 +148,14 @@ if [ -n "$name" ]; then
   replace "$name" "$old_version" "$new_version"
 
   if [ "$commit" -eq 1 ]; then
-  printf 'Committing...'
+    echo 'Committing...'
+    echo '---'
     git add \
+      "$name/alpine/Dockerfile" \
+      "$name/debian/Dockerfile" \
       DOCKERHUB.md \
       README.md \
       bin/generate-supported-tags.sh \
-      "$name/alpine/Dockerfile" \
-      "$name/debian/Dockerfile" \
       versions.json
     if [ -n "$(git diff --cached --name-only)" ]; then
       git commit -m "Bump ImageMagick from $old_version to $new_version"
