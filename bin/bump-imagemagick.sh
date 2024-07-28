@@ -148,8 +148,7 @@ if [ -n "$name" ]; then
   replace "$name" "$old_version" "$new_version"
 
   if [ "$commit" -eq 1 ]; then
-    echo 'Committing...'
-    echo '---'
+    printf 'Committing...'
     git add \
       "$name/alpine/Dockerfile" \
       "$name/debian/Dockerfile" \
@@ -158,8 +157,9 @@ if [ -n "$name" ]; then
       bin/generate-supported-tags.sh \
       versions.json
     if [ -n "$(git diff --cached --name-only)" ]; then
+      printf '\n'
+      echo '---'
       git commit -m "Bump ImageMagick from $old_version to $new_version"
-      printf ' Done\n'
     else
       printf ' Skipped\n'
     fi
