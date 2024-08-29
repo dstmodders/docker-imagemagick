@@ -107,7 +107,7 @@ jobs:
             legacy-${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles-version-short }}
             legacy-${{ matrix.image.version }}-debian-
       - name: Build a Debian image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         id: debian
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
@@ -145,7 +145,7 @@ jobs:
             legacy-${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles-version-short }}
             legacy-${{ matrix.image.version }}-alpine-
       - name: Build an Alpine image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         id: alpine
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
@@ -244,7 +244,7 @@ jobs:
             ${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles-version-short }}
             ${{ matrix.image.version }}-debian-
       - name: Build a Debian image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         id: debian
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
@@ -279,7 +279,7 @@ jobs:
             ${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles-version-short }}
             ${{ matrix.image.version }}-alpine-
       - name: Build an Alpine image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         id: alpine
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
