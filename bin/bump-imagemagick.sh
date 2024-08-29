@@ -34,18 +34,21 @@ print_bold() {
   fi
 }
 
-print_bold_red() {
-  local value="$1"
-  if [ "$DISABLE_COLORS" = '1' ] || ! [ -t 0 ]; then
-    printf '%s' "$value"
+print_bold_color() {
+  local color="$1"
+  local value="$2"
+  local output="${3:-1}"
+
+  if [ "$DISABLE_COLORS" = '1' ] || ! [ -t 1 ]; then
+    printf '%s' "$value" >&"$output"
   else
-    printf "$(tput bold)$(tput setaf 1)%s$(tput sgr0)" "$value"
+    printf "$(tput bold)$(tput setaf "$color")%s$(tput sgr0)" "$value" >&"$output"
   fi
 }
 
 print_error() {
-  print_bold_red "error: $1"
-  echo ''
+  print_bold_color 1 "error: $1" 2
+  echo '' >&2
 }
 
 summary() {
