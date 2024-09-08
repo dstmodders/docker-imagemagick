@@ -140,7 +140,12 @@ if [ -n "$name" ]; then
 
   if [ -z "$new_version" ]; then
     echo "Current version: $old_version"
-    read -rp "Enter new $name version: " new_version
+    while [ -z "$new_version" ]; do
+      read -rp "Enter new $name version: " new_version
+      if [ -z "$new_version" ]; then
+        print_error 'empty version'
+      fi
+    done
     echo '---'
   fi
 
