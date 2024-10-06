@@ -36,7 +36,7 @@ cd "$BASE_DIR" || exit 1
 
 printf "## Supported tags and respective \`Dockerfile\` links\n\n"
 
-# reference: 7.1.1-38-alpine, 7.1.1-38, alpine, latest
+# reference: 7.1.1-39-alpine, 7.1.1-39, alpine, latest
 for key in "${LATEST_VERSIONS_KEYS[@]}"; do
   for dist in "${DISTS[@]}"; do
     version="$(jq -r ".latest | .[$key] | .version" <<< "$JSON")"
