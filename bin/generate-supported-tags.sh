@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 
+# constants
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMMIT_ID="$(git rev-parse --verify HEAD)"
 DISTS=('alpine' 'debian')
+HEADING_FOR_OVERVIEW='## Overview'
+HEADING_FOR_TAGS="## Supported tags and respective \`Dockerfile\` links"
 JSON="$(cat ./versions.json)"
 LATEST_VERSIONS_KEYS=()
 LEGACY_VERSIONS_KEYS=()
+PROGRAM="$(basename "$0")"
 REPOSITORY='https://github.com/dstmodders/docker-imagemagick'
 
 extract_and_sort_keys() {
@@ -19,10 +23,57 @@ mapfile -t LEGACY_VERSIONS_KEYS < <(extract_and_sort_keys '.legacy')
 readonly BASE_DIR
 readonly COMMIT_ID
 readonly DISTS
+readonly HEADING_FOR_OVERVIEW
+readonly HEADING_FOR_TAGS
 readonly JSON
 readonly LATEST_VERSIONS_KEYS
 readonly LEGACY_VERSIONS_KEYS
+readonly PROGRAM
 readonly REPOSITORY
+
+# flags
+FLAG_COMMIT=0
+
+usage() {
+  cat <<EOF
+Generate supported tags.
+
+Usage:
+  $PROGRAM [flags]
+
+Flags:
+  -c, --commit   commit changes
+  -h, --help     help for $PROGRAM
+EOF
+}
+
+print_bold() {
+  local value="$1"
+  local output="${3:-1}"
+
+  if [ "$DISABLE_COLORS" = '1' ] || ! [ -t 1 ]; then
+    printf '%s' "$value" >&"$output"
+  else
+    printf "$(tput bold)%s$(tput sgr0)" "$value" >&"$output"
+  fi
+}
+
+print_bold_color() {
+  local color="$1"
+  local value="$2"
+  local output="${3:-1}"
+
+  if [ "$DISABLE_COLORS" = '1' ] || ! [ -t 1 ]; then
+    printf '%s' "$value" >&"$output"
+  else
+    printf "$(tput bold)$(tput setaf "$color")%s$(tput sgr0)" "$value" >&"$output"
+  fi
+}
+
+print_error() {
+  print_bold_color 1 "error: $1" 2
+  echo '' >&2
+}
 
 print_url() {
   local tags="$1"
@@ -32,54 +83,119 @@ print_url() {
   echo "- $url"
 }
 
-cd "$BASE_DIR" || exit 1
-
-printf "## Supported tags and respective \`Dockerfile\` links\n\n"
-
 # reference: 7.1.1-39-alpine, 7.1.1-39, alpine, latest
-for key in "${LATEST_VERSIONS_KEYS[@]}"; do
-  for dist in "${DISTS[@]}"; do
-    version="$(jq -r ".latest | .[$key] | .version" <<< "$JSON")"
-    latest="$(jq -r ".latest | .[$key] | .latest" <<< "$JSON")"
+print_latest_tags() {
+  for key in "${LATEST_VERSIONS_KEYS[@]}"; do
+    for dist in "${DISTS[@]}"; do
+      version="$(jq -r ".latest | .[$key] | .version" <<< "$JSON")"
+      latest="$(jq -r ".latest | .[$key] | .latest" <<< "$JSON")"
 
-    tag_dist="$dist"
-    tag_full="$version-$dist"
-    tag_version="$version"
+      tag_dist="$dist"
+      tag_full="$version-$dist"
+      tag_version="$version"
 
-    tags=''
-    if [ "$dist" == 'alpine' ]; then
-      tags="\`$tag_full\`, \`$tag_version\`, \`$tag_dist\`"
-      if [ "$latest" == 'true' ]; then
-        tags="$tags, \`latest\`"
+      tags=''
+      if [ "$dist" == 'alpine' ]; then
+        tags="\`$tag_full\`, \`$tag_version\`, \`$tag_dist\`"
+        if [ "$latest" == 'true' ]; then
+          tags="$tags, \`latest\`"
+        fi
+      else
+        tags="\`$tag_full\`, \`$tag_dist\`"
       fi
-    else
-      tags="\`$tag_full\`, \`$tag_dist\`"
-    fi
 
-    print_url "$tags" "$COMMIT_ID" "latest/$dist"
+      print_url "$tags" "$COMMIT_ID" "latest/$dist"
+    done
   done
-done
+}
 
 # reference: legacy-6.9.13-17-alpine, legacy-6.9.13-17, legacy-alpine, legacy-latest, legacy
-for key in "${LEGACY_VERSIONS_KEYS[@]}"; do
-  for dist in "${DISTS[@]}"; do
-    version="$(jq -r ".legacy | .[$key] | .version" <<< "$JSON")"
-    latest="$(jq -r ".legacy | .[$key] | .latest" <<< "$JSON")"
+print_legacy_tags() {
+  for key in "${LEGACY_VERSIONS_KEYS[@]}"; do
+    for dist in "${DISTS[@]}"; do
+      version="$(jq -r ".legacy | .[$key] | .version" <<< "$JSON")"
+      latest="$(jq -r ".legacy | .[$key] | .latest" <<< "$JSON")"
 
-    tag_dist="legacy-$dist"
-    tag_full="legacy-$version-$dist"
-    tag_version="legacy-$version"
+      tag_dist="legacy-$dist"
+      tag_full="legacy-$version-$dist"
+      tag_version="legacy-$version"
 
-    tags=''
-    if [ "$dist" == 'alpine' ]; then
-      tags="\`$tag_full\`, \`$tag_version\`, \`$tag_dist\`"
-      if [ "$latest" == 'true' ]; then
-        tags="$tags, \`legacy-latest\`, \`legacy\`"
+      tags=''
+      if [ "$dist" == 'alpine' ]; then
+        tags="\`$tag_full\`, \`$tag_version\`, \`$tag_dist\`"
+        if [ "$latest" == 'true' ]; then
+          tags="$tags, \`legacy-latest\`, \`legacy\`"
+        fi
+      else
+        tags="\`$tag_full\`, \`$tag_dist\`"
       fi
-    else
-      tags="\`$tag_full\`, \`$tag_dist\`"
-    fi
 
-    print_url "$tags" "$COMMIT_ID" "legacy/$dist"
+      print_url "$tags" "$COMMIT_ID" "legacy/$dist"
+    done
   done
+}
+
+replace() {
+  local content="$1"
+  for file in ./DOCKERHUB.md ./README.md; do
+    sed -i "/$HEADING_FOR_TAGS/,/$HEADING_FOR_OVERVIEW/ {
+      /$HEADING_FOR_TAGS/!{
+        /$HEADING_FOR_OVERVIEW/!d
+      }
+      /$HEADING_FOR_TAGS/!b
+      r /dev/stdin
+      d
+    }" "$file" <<< "$content"
+  done
+}
+
+cd "$BASE_DIR/.." || exit 1
+
+while [ $# -gt 0 ]; do
+  key="$1"
+  case "$key" in
+    -c|--commit)
+      FLAG_COMMIT=1
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      print_error 'unrecognized flag'
+      exit 1
+      ;;
+    *)
+      ;;
+  esac
+  shift 1
 done
+
+readonly FLAG_COMMIT
+
+printf "%s\n\n" "$HEADING_FOR_TAGS"
+
+if [ "$FLAG_COMMIT" -eq 1 ]; then
+  latest_tags="$(print_latest_tags)"
+  legacy_tags="$(print_legacy_tags)"
+  echo "$latest_tags"
+  echo "$legacy_tags"
+  echo '---'
+  if [ "$FLAG_COMMIT" -eq 1 ]; then
+    replace "$HEADING_FOR_TAGS"$'\n'$'\n'"$latest_tags"$'\n'"$legacy_tags"$'\n'
+    printf 'Committing...'
+    git add \
+      DOCKERHUB.md \
+      README.md
+    if [ -n "$(git diff --cached --name-only)" ]; then
+      printf '\n'
+      echo '---'
+      git commit -m 'Change tags in DOCKERHUB.md and README.md'
+    else
+      printf ' Skipped\n'
+    fi
+  fi
+else
+  print_latest_tags
+  print_legacy_tags
+fi
