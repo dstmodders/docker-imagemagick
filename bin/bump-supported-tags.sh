@@ -33,17 +33,19 @@ readonly REPOSITORY
 
 # flags
 FLAG_COMMIT=0
+FLAG_DRY_RUN=0
 
 usage() {
   cat <<EOF
-Generate supported tags.
+Bump supported tags.
 
 Usage:
   $PROGRAM [flags]
 
 Flags:
-  -c, --commit   commit changes
-  -h, --help     help for $PROGRAM
+  -c, --commit    commit changes
+  -d, --dry-run   only check and don't apply or commit any changes
+  -h, --help      help for $PROGRAM
 EOF
 }
 
@@ -157,6 +159,9 @@ while [ $# -gt 0 ]; do
     -c|--commit)
       FLAG_COMMIT=1
       ;;
+    -d|--dry-run)
+      FLAG_DRY_RUN=1
+      ;;
     -h|--help)
       usage
       exit 0
@@ -172,30 +177,32 @@ while [ $# -gt 0 ]; do
 done
 
 readonly FLAG_COMMIT
+readonly FLAG_DRY_RUN
 
 printf "%s\n\n" "$HEADING_FOR_TAGS"
 
-if [ "$FLAG_COMMIT" -eq 1 ]; then
+if [ "$FLAG_DRY_RUN" -eq 1 ]; then
+  print_latest_tags
+  print_legacy_tags
+  exit 0
+else
   latest_tags="$(print_latest_tags)"
   legacy_tags="$(print_legacy_tags)"
   echo "$latest_tags"
   echo "$legacy_tags"
+
   echo '---'
+  printf 'Replacing...'
+  replace "$HEADING_FOR_TAGS"$'\n'$'\n'"$latest_tags"$'\n'"$legacy_tags"$'\n'
+  printf ' Done\n'
+
   if [ "$FLAG_COMMIT" -eq 1 ]; then
-    replace "$HEADING_FOR_TAGS"$'\n'$'\n'"$latest_tags"$'\n'"$legacy_tags"$'\n'
     printf 'Committing...'
-    git add \
-      DOCKERHUB.md \
-      README.md
+    git add ./DOCKERHUB.md ./README.md
     if [ -n "$(git diff --cached --name-only)" ]; then
       printf '\n'
       echo '---'
       git commit -m 'Change tags in DOCKERHUB.md and README.md'
-    else
-      printf ' Skipped\n'
     fi
   fi
-else
-  print_latest_tags
-  print_legacy_tags
 fi
