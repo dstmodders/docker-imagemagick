@@ -1,5 +1,6 @@
 #!/bin/bash
 
+# define constants
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 DOCKER_ALPINE_IMAGE='alpine:3.19.1'
 DOCKER_DEBIAN_IMAGE='debian:bookworm-slim'
@@ -27,7 +28,7 @@ usage() {
 
 print_bold() {
   local value="$1"
-  local output="${3:-1}"
+  local output="${2:-1}"
 
   if [ "$DISABLE_COLORS" = '1' ] || ! [ -t 1 ]; then
     printf '%s' "$value" >&"$output"

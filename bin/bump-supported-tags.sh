@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# constants
+# define constants
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMMIT_ID="$(git rev-parse --verify HEAD)"
 DISTS=('alpine' 'debian')
@@ -31,7 +31,7 @@ readonly LEGACY_VERSIONS_KEYS
 readonly PROGRAM
 readonly REPOSITORY
 
-# flags
+# define flags
 FLAG_COMMIT=0
 FLAG_DRY_RUN=0
 
@@ -51,7 +51,7 @@ EOF
 
 print_bold() {
   local value="$1"
-  local output="${3:-1}"
+  local output="${2:-1}"
 
   if [ "$DISABLE_COLORS" = '1' ] || ! [ -t 1 ]; then
     printf '%s' "$value" >&"$output"
