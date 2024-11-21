@@ -2,10 +2,10 @@
 
 ## Supported tags and respective `Dockerfile` links
 
-- [`7.1.1-39-alpine`, `7.1.1-39`, `alpine`, `latest`](https://github.com/dstmodders/docker-imagemagick/blob/020c720e5e9480bee6261fa027a8757728b3b1ca/latest/alpine/Dockerfile)
-- [`7.1.1-39-debian`, `debian`](https://github.com/dstmodders/docker-imagemagick/blob/020c720e5e9480bee6261fa027a8757728b3b1ca/latest/debian/Dockerfile)
-- [`legacy-6.9.13-17-alpine`, `legacy-6.9.13-17`, `legacy-alpine`, `legacy-latest`, `legacy`](https://github.com/dstmodders/docker-imagemagick/blob/020c720e5e9480bee6261fa027a8757728b3b1ca/legacy/alpine/Dockerfile)
-- [`legacy-6.9.13-17-debian`, `legacy-debian`](https://github.com/dstmodders/docker-imagemagick/blob/020c720e5e9480bee6261fa027a8757728b3b1ca/legacy/debian/Dockerfile)
+- [`7.1.1-40-alpine`, `7.1.1-40`, `alpine`, `latest`](https://github.com/dstmodders/docker-imagemagick/blob/ea4832b8c890e2dedbc7c3ea4fbb864e3799f4e5/latest/alpine/Dockerfile)
+- [`7.1.1-40-debian`, `debian`](https://github.com/dstmodders/docker-imagemagick/blob/ea4832b8c890e2dedbc7c3ea4fbb864e3799f4e5/latest/debian/Dockerfile)
+- [`legacy-6.9.13-18-alpine`, `legacy-6.9.13-18`, `legacy-alpine`, `legacy-latest`, `legacy`](https://github.com/dstmodders/docker-imagemagick/blob/ea4832b8c890e2dedbc7c3ea4fbb864e3799f4e5/legacy/alpine/Dockerfile)
+- [`legacy-6.9.13-18-debian`, `legacy-debian`](https://github.com/dstmodders/docker-imagemagick/blob/ea4832b8c890e2dedbc7c3ea4fbb864e3799f4e5/legacy/debian/Dockerfile)
 
 ## Overview
 
