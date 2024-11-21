@@ -11,8 +11,9 @@ readonly DOCKER_ALPINE_IMAGE
 readonly DOCKER_DEBIAN_IMAGE
 readonly PROGRAM
 
-COMMIT=0
-DRY_RUN=0
+# define flags
+FLAG_COMMIT=0
+FLAG_DRY_RUN=0
 
 usage() {
   echo -e "Bump package in Dockerfiles.
@@ -157,7 +158,7 @@ update_package_in_dockerfile() {
   fi
   printf '\n'
 
-  if [ "$DRY_RUN" -eq 1 ]; then
+  if [ "$FLAG_DRY_RUN" -eq 1 ]; then
     return 0
   fi
 
@@ -169,7 +170,7 @@ commit_changes() {
   local commit_message_first_line="$2"
   local commit_message="$3"
 
-  if [ "$DRY_RUN" -eq 0 ] && [ "$COMMIT" -eq 1 ]; then
+  if [ "$FLAG_DRY_RUN" -eq 0 ] && [ "$FLAG_COMMIT" -eq 1 ]; then
     printf 'Committing...'
     git add "$dockerfile"
 
@@ -194,12 +195,12 @@ update_alpine_dockerfile() {
     latest_version="$(get_latest_apk_package_version "$package_name")"
     update_package_in_dockerfile "$dockerfile" "$package_name" "$current_version" "$latest_version"
 
-    if [ "$DRY_RUN" -eq 0 ] && [ "$COMMIT" -eq 1 ] && [ "$current_version" != "$latest_version" ]; then
+    if [ "$FLAG_DRY_RUN" -eq 0 ] && [ "$FLAG_COMMIT" -eq 1 ] && [ "$current_version" != "$latest_version" ]; then
       commit_list+=("- Bump $package_name from $current_version to $latest_version")
     fi
   done <<< "$(get_packages_from_dockerfile "$dockerfile")"
 
-  if [ "$DRY_RUN" -eq 0 ] && [ "$COMMIT" -eq 1 ] && [ "${#commit_list[@]}" -gt 0 ]; then
+  if [ "$FLAG_DRY_RUN" -eq 0 ] && [ "$FLAG_COMMIT" -eq 1 ] && [ "${#commit_list[@]}" -gt 0 ]; then
     mapfile -t sorted_commit_list < <(printf "%s\n" "${commit_list[@]}" | sort)
     commit_message="$(printf "%s\n" "${sorted_commit_list[@]}")"
     echo '---'
@@ -218,12 +219,12 @@ update_debian_dockerfile() {
     latest_version="$(get_latest_apt_package_version "$package_name")"
     update_package_in_dockerfile "$dockerfile" "$package_name" "$current_version" "$latest_version"
 
-    if [ "$DRY_RUN" -eq 0 ] && [ "$COMMIT" -eq 1 ] && [ "$current_version" != "$latest_version" ]; then
+    if [ "$FLAG_DRY_RUN" -eq 0 ] && [ "$FLAG_COMMIT" -eq 1 ] && [ "$current_version" != "$latest_version" ]; then
       commit_list+=("- Bump $package_name from $current_version to $latest_version")
     fi
   done <<< "$(get_packages_from_dockerfile "$dockerfile")"
 
-  if [ "$DRY_RUN" -eq 0 ] && [ "$COMMIT" -eq 1 ] && [ "${#commit_list[@]}" -gt 0 ]; then
+  if [ "$FLAG_DRY_RUN" -eq 0 ] && [ "$FLAG_COMMIT" -eq 1 ] && [ "${#commit_list[@]}" -gt 0 ]; then
     mapfile -t sorted_commit_list < <(printf "%s\n" "${commit_list[@]}" | sort)
     commit_message="$(printf "%s\n" "${sorted_commit_list[@]}")"
     echo '---'
@@ -237,10 +238,10 @@ while [ $# -gt 0 ]; do
   key="$1"
   case "$key" in
     -c|--commit)
-      COMMIT=1
+      FLAG_COMMIT=1
       ;;
     -d|--dry-run)
-      DRY_RUN=1
+      FLAG_DRY_RUN=1
       ;;
     -h|--help)
       usage
@@ -255,6 +256,9 @@ while [ $# -gt 0 ]; do
   esac
   shift 1
 done
+
+readonly FLAG_COMMIT
+readonly FLAG_DRY_RUN
 
 print_title 'DOCKER'
 echo 'Pulling Docker images...'
