@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # define constants
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -16,15 +16,17 @@ FLAG_COMMIT=0
 FLAG_DRY_RUN=0
 
 usage() {
-  echo -e "Bump package in Dockerfiles.
+  cat <<EOF
+Bump package in Dockerfiles.
 
-    Usage:
-      $PROGRAM [flags] [version]
+Usage:
+  $PROGRAM [flags] [version]
 
-    Flags:
-      -c, --commit    commit changes
-      -d, --dry-run   only check and don't apply or commit any changes
-      -h, --help      help for $PROGRAM" | sed -E 's/^ {4}//'
+Flags:
+  -c, --commit    commit changes
+  -d, --dry-run   only check and don't apply or commit any changes
+  -h, --help      help for $PROGRAM
+EOF
 }
 
 print_bold() {
