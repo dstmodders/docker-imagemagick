@@ -20,7 +20,7 @@ usage() {
 Bump package in Dockerfiles.
 
 Usage:
-  $PROGRAM [flags] [version]
+  $PROGRAM [flags]
 
 Flags:
   -c, --commit    commit changes
