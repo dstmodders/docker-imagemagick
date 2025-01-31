@@ -3,6 +3,7 @@
 # define constants
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 COMMIT_ID="$(git rev-parse --verify HEAD)"
+COMMIT_MESSAGE='Change tags in DOCKERHUB.md and README.md'
 DISTS=('alpine' 'debian')
 HEADING_FOR_OVERVIEW='## Overview'
 HEADING_FOR_TAGS="## Supported tags and respective \`Dockerfile\` links"
@@ -22,6 +23,7 @@ mapfile -t LEGACY_VERSIONS_KEYS < <(extract_and_sort_keys '.legacy')
 
 readonly BASE_DIR
 readonly COMMIT_ID
+readonly COMMIT_MESSAGE
 readonly DISTS
 readonly HEADING_FOR_OVERVIEW
 readonly HEADING_FOR_TAGS
@@ -202,7 +204,9 @@ else
     if [ -n "$(git diff --cached --name-only)" ]; then
       printf '\n'
       echo '---'
-      git commit -m 'Change tags in DOCKERHUB.md and README.md'
+      git commit -m "$COMMIT_MESSAGE"
+    else
+      printf ' Skipped\n'
     fi
   fi
 fi
