@@ -11,9 +11,9 @@ RUN groupadd --gid 1000 imagemagick \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
     build-essential='12.9' \
-    ca-certificates='20230311' \
+    ca-certificates='20230311+deb12u1' \
     git='1:2.39.5-0+deb12u2' \
-    libgomp1='12.2.0-14' \
+    libgomp1='12.2.0-14+deb12u1' \
     libpng-dev='1.6.39-2' \
     libzip-dev='1.7.3-1+b1' \
     pkg-config='1.8.1-1' \
