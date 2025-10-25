@@ -14,9 +14,22 @@ RUN groupadd --gid 1000 imagemagick \
     ca-certificates='20230311+deb12u1' \
     git='1:2.39.5-0+deb12u2' \
     libgomp1='12.2.0-14+deb12u1' \
-    libpng-dev='1.6.39-2' \
     libzip-dev='1.7.3-1+b1' \
     pkg-config='1.8.1-1' \
+    # JPEG
+    libjpeg62-turbo-dev='1:2.1.5-2' \
+    libjpeg62-turbo='1:2.1.5-2' \
+    # PNG
+    libpng-dev='1.6.39-2' \
+    libpng16-16='1.6.39-2' \
+    # TIFF \
+    libtiff-dev='4.5.0-6+deb12u3' \
+    libtiff6='4.5.0-6+deb12u3' \
+    # WebP \
+    libwebp-dev='1.2.4-0.2+deb12u1' \
+    libwebp7='1.2.4-0.2+deb12u1' \
+    libwebpdemux2='1.2.4-0.2+deb12u1' \
+    libwebpmux3='1.2.4-0.2+deb12u1' \
   # ImageMagick
   && git clone "https://github.com/ImageMagick/ImageMagick$([[ "${IMAGEMAGICK_VERSION}" =~ ^6 ]] && echo '6').git" /tmp/ImageMagick/ \
   && cd /tmp/ImageMagick/ \
@@ -31,6 +44,14 @@ RUN groupadd --gid 1000 imagemagick \
     ca-certificates \
     git \
     pkg-config \
+    # JPEG
+    libjpeg62-turbo-dev \
+    # PNG
+    libpng-dev \
+    # TIFF
+    libtiff-dev \
+    # WebP
+    libwebp-dev \
   && apt-get clean \
   && apt-get autoremove -y \
   && rm -rf \
