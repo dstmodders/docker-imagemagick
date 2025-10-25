@@ -16,6 +16,9 @@ RUN groupadd --gid 1000 imagemagick \
     libgomp1='12.2.0-14+deb12u1' \
     libzip-dev='1.7.3-1+b1' \
     pkg-config='1.8.1-1' \
+    # Perl
+    libperl-dev='5.36.0-7+deb12u3' \
+    libperl5.36='5.36.0-7+deb12u3' \
     # JPEG
     libjpeg62-turbo-dev='1:2.1.5-2' \
     libjpeg62-turbo='1:2.1.5-2' \
@@ -34,7 +37,7 @@ RUN groupadd --gid 1000 imagemagick \
   && git clone "https://github.com/ImageMagick/ImageMagick$([[ "${IMAGEMAGICK_VERSION}" =~ ^6 ]] && echo '6').git" /tmp/ImageMagick/ \
   && cd /tmp/ImageMagick/ \
   && git checkout "${IMAGEMAGICK_VERSION}" \
-  && ./configure --with-png \
+  && ./configure --with-perl --with-png \
   && make \
   && make install \
   && ldconfig /usr/local/lib/ \
@@ -44,6 +47,8 @@ RUN groupadd --gid 1000 imagemagick \
     ca-certificates \
     git \
     pkg-config \
+    # Perl
+    libperl-dev \
     # JPEG
     libjpeg62-turbo-dev \
     # PNG

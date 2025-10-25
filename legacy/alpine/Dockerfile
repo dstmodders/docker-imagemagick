@@ -13,6 +13,8 @@ RUN addgroup -g 1000 imagemagick \
     libgomp='13.2.1_git20231014-r0' \
     libstdc++='13.2.1_git20231014-r0' \
     libzip-dev='1.10.1-r0' \
+    # Perl
+    perl='5.38.5-r0' \
     # JPEG
     libjpeg-turbo='3.0.1-r0' \
     # PNG
@@ -29,6 +31,8 @@ RUN addgroup -g 1000 imagemagick \
     git='2.43.7-r0' \
     libc-dev='0.7.2-r5' \
     make='4.4.1-r2' \
+    # Perl
+    perl-dev='5.38.5-r0' \
     # JPEG
     libjpeg-turbo-dev='3.0.1-r0' \
     # PNG
@@ -41,7 +45,7 @@ RUN addgroup -g 1000 imagemagick \
   && git clone "https://github.com/ImageMagick/ImageMagick$([ "$(printf '%s' "${IMAGEMAGICK_VERSION}" | cut -c 1)" -eq '6' ] && echo '6').git" /tmp/ImageMagick/ \
   && cd /tmp/ImageMagick/ \
   && git checkout "${IMAGEMAGICK_VERSION}" \
-  && ./configure --with-png \
+  && ./configure --with-perl --with-png \
   && make \
   && make install \
   && ldconfig /usr/local/lib/ \
