@@ -19,6 +19,12 @@ RUN groupadd --gid 1000 imagemagick \
     # Perl
     libperl-dev='5.36.0-7+deb12u3' \
     libperl5.36='5.36.0-7+deb12u3' \
+    # Fonts
+    fonts-dejavu='2.37-6' \
+    libfontconfig1-dev='2.14.1-4' \
+    libfontconfig1='2.14.1-4' \
+    libfreetype6-dev='2.12.1+dfsg-5+deb12u4' \
+    libfreetype6='2.12.1+dfsg-5+deb12u4' \
     # JPEG
     libjpeg62-turbo-dev='1:2.1.5-2' \
     libjpeg62-turbo='1:2.1.5-2' \
@@ -49,6 +55,9 @@ RUN groupadd --gid 1000 imagemagick \
     pkg-config \
     # Perl
     libperl-dev \
+    # Fonts
+    libfontconfig1-dev \
+    libfreetype6-dev \
     # JPEG
     libjpeg62-turbo-dev \
     # PNG
