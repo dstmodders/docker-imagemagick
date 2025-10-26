@@ -15,6 +15,10 @@ RUN addgroup -g 1000 imagemagick \
     libzip-dev='1.10.1-r0' \
     # Perl
     perl='5.38.5-r0' \
+    # Fonts
+    font-dejavu='2.37-r5' \
+    fontconfig='2.14.2-r4' \
+    freetype='2.13.2-r0' \
     # JPEG
     libjpeg-turbo='3.0.1-r0' \
     # PNG
@@ -33,6 +37,9 @@ RUN addgroup -g 1000 imagemagick \
     make='4.4.1-r2' \
     # Perl
     perl-dev='5.38.5-r0' \
+    # Fonts
+    fontconfig-dev='2.14.2-r4' \
+    freetype-dev='2.13.2-r0' \
     # JPEG
     libjpeg-turbo-dev='3.0.1-r0' \
     # PNG
