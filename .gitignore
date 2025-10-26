@@ -1,2 +1,4 @@
 .idea/
 .vscode/
+tests/perlmagick/demo.pam
+tests/result/
