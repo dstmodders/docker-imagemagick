@@ -87,7 +87,7 @@ PS:\> docker run --rm -v "${PWD}:/data/" dstmodders/imagemagick magick input.gif
 
 ## Build
 
-To build images locally:
+To build images individually (locally):
 
 ```shell
 $ docker build --tag='dstmodders/imagemagick:alpine' ./latest/alpine/
@@ -105,6 +105,23 @@ $ docker buildx build --platform='linux/amd64,linux/386,linux/arm64,linux/arm/v7
 $ docker buildx build --platform='linux/amd64,linux/386,linux/arm64,linux/arm/v7' --tag='dstmodders/imagemagick:legacy-debian' ./legacy/debian/
 ```
 
+## To build images using single command (locally) :
+
+To build all the images (both `latest` and `legacy`):
+````
+$ ./bin/build.sh
+````
+
+To build only latest images
+````
+$ ./bin/build.sh latest
+````
+
+To build only legacy images
+````
+$ ./bin/build.sh legacy
+````
+
 ## License
 
 Released under the [MIT License](https://opensource.org/licenses/MIT).
@@ -120,3 +137,4 @@ Released under the [MIT License](https://opensource.org/licenses/MIT).
 [imagemagick 7]: https://legacy.imagemagick.org/
 [imagemagick]: https://imagemagick.org/
 [tags]: https://hub.docker.com/r/dstmodders/imagemagick/tags
+````
