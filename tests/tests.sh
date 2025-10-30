@@ -8,9 +8,7 @@ readonly BASE_DIR
 readonly IMAGE_RECT_SIZE
 
 create() {
-  IMAGEMAGICK_VERSION=${IMAGEMAGICK_VERSION:-$(convert -version 2>/dev/null | head -n 1 | sed 's/^.*Version: ImageMagick \([0-9]\).*$/\1/')}
-
-  if [ "$IMAGEMAGICK_VERSION" = '6' ]; then
+  if [ "$(printf '%s' "$IMAGEMAGICK_VERSION" | cut -c 1)" -eq '6' ]; then
     # shellcheck disable=SC2068
     convert $@
   else

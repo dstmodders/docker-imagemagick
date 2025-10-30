@@ -117,41 +117,66 @@ jobs:
           status: ${{ job.status }}
           timestamp: ${{ steps.slack.outputs.slack-timestamp }}
 
-test:
+  test:
     runs-on: ubuntu-latest
-    needs: [lint]
     steps:
       - name: Check out
         uses: actions/checkout@v4
 
-      - name: Install ImageMagick Dependencies
-        run: |
-          #Install dependencies required by tests/tests.sh (ImageMagick/PerlMagick)
-          sudo apt-get update
-          sudo apt-get install -y imagemagick libimage-magick-perl
+      - name: Send Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' }}
+        id: slack
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            Testing: Checking...
+          status: in-progress
 
       - name: Run tests
-        id: run_tests
-        # The '|| true' allows the workflow to continue to the artifact upload even if tests fail, so that we can save results.
-        run: tests/tests.sh || true
+        run: |
+          docker pull dstmodders/imagemagick:latest
+          docker run \
+            -u "$(id -u):$(id -g)" \
+            -v './tests:/tests:rw' \
+            -v './tests-latest-results:/tmp/result:rw' \
+            -w /tests/ \
+            dstmodders/imagemagick:latest \
+            /bin/sh -c './tests.sh; mv ./result/* /tmp/result/'
 
-      - name: Upload Test Results artifact
+          docker pull dstmodders/imagemagick:legacy
+          docker run \
+            -u "$(id -u):$(id -g)" \
+            -v './tests:/tests:rw' \
+            -v './tests-legacy-results:/tmp/result:rw' \
+            -w /tests/ \
+            dstmodders/imagemagick:legacy \
+            /bin/sh -c './tests.sh; mv ./result/* /tmp/result/'
+
+      - name: Upload latest test results
         uses: actions/upload-artifact@v4
-        # This condition ensures the artifact is always uploaded, even if the tests fail.
         if: always()
         with:
-          name: test-results-${{ github.run_id }}
-          path: tests/result/
+          name: tests-latest-results-${{ github.run_id }}
+          path: ./tests-latest-results
           retention-days: 7
 
-      - name: Update Slack with Test Status and Link
+      - name: Upload legacy test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-legacy-results-${{ github.run_id }}
+          path: ./tests-legacy-results
+          retention-days: 7
+
+      - name: Update Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' && always() }}
         with:
           fields: |
             {STATUS}
             {REF}
-            Test Status: ${{ job.status }}
-            Test Results Artifact: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | View Artifacts>
+            Testing: Completed
           status: ${{ job.status }}
           timestamp: ${{ steps.slack.outputs.slack-timestamp }}
