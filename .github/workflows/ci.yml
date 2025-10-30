@@ -116,3 +116,42 @@ jobs:
             Prettier issues: ${{ steps.prettier.outputs.issues || 'Skipped' }}
           status: ${{ job.status }}
           timestamp: ${{ steps.slack.outputs.slack-timestamp }}
+
+test:
+    runs-on: ubuntu-latest
+    needs: [lint]
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Install ImageMagick Dependencies
+        run: |
+          #Install dependencies required by tests/tests.sh (ImageMagick/PerlMagick)
+          sudo apt-get update
+          sudo apt-get install -y imagemagick libimage-magick-perl
+
+      - name: Run tests
+        id: run_tests
+        # The '|| true' allows the workflow to continue to the artifact upload even if tests fail, so that we can save results.
+        run: tests/tests.sh || true
+
+      - name: Upload Test Results artifact
+        uses: actions/upload-artifact@v4
+        # This condition ensures the artifact is always uploaded, even if the tests fail.
+        if: always()
+        with:
+          name: test-results-${{ github.run_id }}
+          path: tests/result/
+          retention-days: 7
+
+      - name: Update Slack with Test Status and Link
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' && always() }}
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            Test Status: ${{ job.status }}
+            Test Results Artifact: <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }} | View Artifacts>
+          status: ${{ job.status }}
+          timestamp: ${{ steps.slack.outputs.slack-timestamp }}
