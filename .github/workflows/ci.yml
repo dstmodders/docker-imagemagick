@@ -116,3 +116,67 @@ jobs:
             Prettier issues: ${{ steps.prettier.outputs.issues || 'Skipped' }}
           status: ${{ job.status }}
           timestamp: ${{ steps.slack.outputs.slack-timestamp }}
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Send Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' }}
+        id: slack
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            Testing: Checking...
+          status: in-progress
+
+      - name: Run tests
+        run: |
+          docker pull dstmodders/imagemagick:latest
+          docker run \
+            -u "$(id -u):$(id -g)" \
+            -v './tests:/tests:rw' \
+            -v './tests-latest-results:/tmp/result:rw' \
+            -w /tests/ \
+            dstmodders/imagemagick:latest \
+            /bin/sh -c './tests.sh; mv ./result/* /tmp/result/'
+
+          docker pull dstmodders/imagemagick:legacy
+          docker run \
+            -u "$(id -u):$(id -g)" \
+            -v './tests:/tests:rw' \
+            -v './tests-legacy-results:/tmp/result:rw' \
+            -w /tests/ \
+            dstmodders/imagemagick:legacy \
+            /bin/sh -c './tests.sh; mv ./result/* /tmp/result/'
+
+      - name: Upload latest test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-latest-results-${{ github.run_id }}
+          path: ./tests-latest-results
+          retention-days: 7
+
+      - name: Upload legacy test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-legacy-results-${{ github.run_id }}
+          path: ./tests-legacy-results
+          retention-days: 7
+
+      - name: Update Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' && always() }}
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            Testing: Completed
+          status: ${{ job.status }}
+          timestamp: ${{ steps.slack.outputs.slack-timestamp }}
