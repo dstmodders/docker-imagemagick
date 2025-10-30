@@ -136,18 +136,21 @@ jobs:
 
       - name: Run tests
         run: |
+          mkdir -p ./tests/result/ ./tests-latest-results/ ./tests-legacy-results/
+          sudo chown -R 1000:1000 ./tests/ ./tests-latest-results/ ./tests-legacy-results/
+
+          # ImageMagick 7
           docker pull dstmodders/imagemagick:latest
           docker run \
-            -u "$(id -u):$(id -g)" \
             -v './tests:/tests:rw' \
             -v './tests-latest-results:/tmp/result:rw' \
             -w /tests/ \
             dstmodders/imagemagick:latest \
             /bin/sh -c './tests.sh; mv ./result/* /tmp/result/'
 
+          # ImageMagick 6
           docker pull dstmodders/imagemagick:legacy
           docker run \
-            -u "$(id -u):$(id -g)" \
             -v './tests:/tests:rw' \
             -v './tests-legacy-results:/tmp/result:rw' \
             -w /tests/ \
