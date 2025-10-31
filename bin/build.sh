@@ -1,149 +1,198 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
-# Script to build docker-imagemagick images locally.
+# Build images locally.
 #
 # Usage:
-#   ./bin/build.sh [options] [image_set]
+#   build.sh [flags] <image set>
 #
-# Options:
-#   -b, --build-cpus <n>    Set the number of CPUs to use for parallel builds.
-#                           Also respects the BUILD_CPUS environment variable.
-#   -h, --help              Show this help message and exit.
+# Flags:
+#   -b, --build-cpus <number>   set the number of CPUs to use for parallel builds
+#   -h, --help                  help for build.sh
 #
 # Image Sets:
-#   all (default)           Builds all 'latest' and 'legacy' images.
-#   latest                  Builds the latest ImageMagick 7 images (alpine, debian).
-#   legacy                  Builds the legacy ImageMagick 6 images (alpine, debian).
+#   all (default)   build all images (latest and legacy)
+#   latest          build the latest ImageMagick 7 images
+#   legacy          build the legacy ImageMagick 6 images
 #
-
 set -euo pipefail
 
-
-IMAGE_NAME="dstmodders/imagemagick"
+# define constants
+BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
+IMAGE_NAME='dstmodders/imagemagick'
+BUILDX_AVAILABLE=0
 
 declare -A LATEST_IMAGES=(
-    ["latest/alpine"]="alpine latest"
-    ["latest/debian"]="debian"
+  ['latest/alpine']='alpine latest'
+  ['latest/debian']='debian'
 )
 
 declare -A LEGACY_IMAGES=(
-    ["legacy/alpine"]="legacy-alpine legacy"
-    ["legacy/debian"]="legacy-debian"
+  ['legacy/alpine']='legacy-alpine legacy'
+  ['legacy/debian']='legacy-debian'
 )
 
+if docker buildx version >/dev/null 2>&1; then
+  BUILDX_AVAILABLE=1
+fi
 
-BUILD_CPUS=""
-BUILD_SET="all"
+readonly BASE_DIR
+readonly BUILDX_AVAILABLE
+readonly IMAGE_NAME
+readonly LATEST_IMAGES
+readonly LEGACY_IMAGES
 
-show_help() {
-    grep ^# "$0"
+# define flags
+FLAG_BUILD_CPUS=''
+
+# define build set
+BUILD_SET='all'
+
+usage() {
+  awk '
+    NR==1 && /^#!/ { next }         # skip shebang
+    /^#/ {                          # collect comment lines
+      sub(/^# ?/, "")
+      buf = buf ? buf ORS $0 : $0
+      next
+    }
+    buf { exit }                    # stop after first non-comment
+    END {
+      if (buf) {
+        sub(/[[:space:]]+$/, "", buf)  # trim trailing whitespace
+        print buf
+      }
+    }
+  ' "$0"
 }
 
-while [[ "$#" -gt 0 ]]; do
-    case "$1" in
-        -b|--build-cpus)
-            if [ -n "$2" ] && ! [[ "$2" =~ ^- ]]; then
-                BUILD_CPUS="$2"
-                shift
-            else
-                echo "Error: Argument for $1 is missing or invalid." >&2
-                exit 1
-            fi
-            ;;
-        -h|--help)
-            show_help
-            exit 0
-            ;;
-        -*)
-            echo "Error: Unknown option $1" >&2
-            show_help
-            exit 1
-            ;;
-        *)
-            if [ -z "$BUILD_SET" ] || [ "$BUILD_SET" == "all" ]; then
-                BUILD_SET="$1"
-            else
-                echo "Error: Too many image sets specified (found '$BUILD_SET' and '$1')." >&2
-                exit 1
-            fi
-            ;;
-    esac
-    shift
-done
+print_bold() {
+  local value="$1"
+  local output="${2:-1}"
 
-if [[ "$BUILD_SET" != "all" && "$BUILD_SET" != "latest" && "$BUILD_SET" != "legacy" ]]; then
-    echo "Error: Invalid image set specified: '$BUILD_SET'. Must be 'all', 'latest', or 'legacy'." >&2
-    exit 1
-fi
+  if [ "${DISABLE_COLORS:-0}" = '1' ] || ! [ -t 1 ]; then
+    printf '%s' "${value}" >&"${output}"
+  else
+    printf "$(tput bold)%s$(tput sgr0)" "${value}" >&"${output}"
+  fi
+}
 
-if [ -z "$BUILD_CPUS" ] && [ -n "${BUILD_CPUS:-}" ]; then
-    BUILD_CPUS="${BUILD_CPUS}"
-fi
+print_bold_color() {
+  local color="$1"
+  local value="$2"
+  local output="${3:-1}"
 
-BUILDX_AVAILABLE=0
-if docker buildx version >/dev/null 2>&1; then
-    BUILDX_AVAILABLE=1
-fi
+  if [ "${DISABLE_COLORS:-0}" = '1' ] || ! [ -t 1 ]; then
+    printf '%s' "${value}" >&"${output}"
+  else
+    printf "$(tput bold)$(tput setaf "${color}")%s$(tput sgr0)" "${value}" >&"${output}"
+  fi
+}
+
+print_error() {
+  print_bold_color 1 "error: $1" 2
+  echo '' >&2
+}
 
 build_image() {
-    local context_path="$1"
-    local tags="$2"
+  local context_path="$1"
+  local tags="$2"
 
-    local BUILD_CMD=""
-    local PLATFORM_ARG=""
-    local BUILD_ARG=""
+  local build_arg=""
+  local build_cmd=""
+  local platform_arg=""
 
-    if [ -n "$BUILD_CPUS" ]; then
-        BUILD_ARG="--build-arg BUILD_CPUS=${BUILD_CPUS}"
-        echo "--> Building with BUILD_CPUS=${BUILD_CPUS}"
-    fi
+  printf 'Building image(s) for context: %s\n\n' "${context_path}"
 
-    if [ "$BUILDX_AVAILABLE" -eq 1 ]; then
-        BUILD_CMD="docker buildx build --load"
-        PLATFORM_ARG=""
-        echo "--> Using 'docker buildx' for single-platform build."
+  if [ "${BUILDX_AVAILABLE}" -eq 1 ]; then
+    build_cmd='docker buildx build --load'
+    platform_arg=''
+    # shellcheck disable=SC2016
+    echo '--> Using `docker buildx` for single-platform build'
 
-        # Uncomment for production multi-platform builds
-        # BUILD_CMD="docker buildx build --push" 
-        # PLATFORM_ARG="--platform=linux/amd64,linux/arm64"
-        # echo "--> Using 'docker buildx' for multi-platform build."
+    # uncomment for production multi-platform builds
+    # build_cmd="docker buildx build --push"
+    # platform_arg="--platform=linux/amd64,linux/arm64"
+    # # shellcheck disable=SC2016
+    # echo '--> Using `docker buildx` for multi-platform build'
+  else
+    build_cmd='docker build'
+    # shellcheck disable=SC2016
+    echo '--> Using `docker build`. Consider installing `docker buildx` for multi-platform support'
+  fi
 
-    else
-        BUILD_CMD="docker build"
-        echo "--> Using standard 'docker build'. Consider installing 'docker buildx' for multi-platform support."
-    fi
+  if [ -n "${FLAG_BUILD_CPUS}" ]; then
+    build_arg="--build-arg BUILD_CPUS=${FLAG_BUILD_CPUS}"
+    # shellcheck disable=SC2016
+    printf -- '--> Using `%s` as build arguments\n' "${build_arg}"
+  fi
 
-    local TAG_ARGS=""
-    for tag in $tags; do
-        TAG_ARGS="${TAG_ARGS} -t ${IMAGE_NAME}:${tag}"
-    done
+  local TAG_ARGS=""
+  for tag in ${tags}; do
+    TAG_ARGS="${TAG_ARGS} -t ${IMAGE_NAME}:${tag}"
+  done
 
-    echo ""
-    echo "======================================================================"
-    echo "🚀 Building image(s) for context: **${context_path}** with tags: **${tags}**"
-    echo "======================================================================"
-    
-    ${BUILD_CMD} ${PLATFORM_ARG} ${TAG_ARGS} ${BUILD_ARG} "${context_path}"
+  echo ''
+  # shellcheck disable=SC2086
+  ${build_cmd} ${platform_arg} ${TAG_ARGS} ${build_arg} "${context_path}"
+  echo '---'
 }
 
+cd "${BASE_DIR}/.." || exit 1
 
-echo "Starting Docker Image build for '${BUILD_SET}' set(s)..."
+while [[ "$#" -gt 0 ]]; do
+  case "$1" in
+    -b|--build-cpus)
+      if [ -n "$2" ] && ! [[ "$2" =~ ^- ]]; then
+        FLAG_BUILD_CPUS="$2"
+        shift
+      else
+        echo "Error: Argument for $1 is missing or invalid." >&2
+        exit 1
+      fi
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      print_error 'unrecognized flag'
+      usage
+      exit 1
+      ;;
+    *)
+      if [ -z "${BUILD_SET}" ] || [ "${BUILD_SET}" == "all" ]; then
+        BUILD_SET="$1"
+      else
+        print_error 'too many image sets specified'
+        usage
+        exit 1
+      fi
+      ;;
+  esac
+  shift
+done
 
-if [ "$BUILD_SET" == "all" ] || [ "$BUILD_SET" == "latest" ]; then
-    echo "### Starting 'latest' ImageMagick 7 images build ###"
-    for context in "${!LATEST_IMAGES[@]}"; do
-        tags="${LATEST_IMAGES[${context}]}"
-        build_image "${context}" "${tags}"
-    done
+readonly BUILD_SET
+readonly FLAG_BUILD_CPUS
+
+if [[ "${BUILD_SET}" != 'all' && "${BUILD_SET}" != 'latest' && "${BUILD_SET}" != 'legacy' ]]; then
+  print_error 'invalid image set specified'
+  usage
+  exit 1
 fi
 
-if [ "$BUILD_SET" == "all" ] || [ "$BUILD_SET" == "legacy" ]; then
-    echo "### Starting 'legacy' ImageMagick 6 images build ###"
-    for context in "${!LEGACY_IMAGES[@]}"; do
-        tags="${LEGACY_IMAGES[${context}]}"
-        build_image "${context}" "${tags}"
-    done
+if [ "${BUILD_SET}" == 'all' ] || [ "${BUILD_SET}" == 'latest' ]; then
+  for context in "${!LATEST_IMAGES[@]}"; do
+    tags="${LATEST_IMAGES[${context}]}"
+    build_image "${context}" "${tags}"
+  done
 fi
 
-echo ""
-echo "Build process complete."
+if [ "${BUILD_SET}" == 'all' ] || [ "${BUILD_SET}" == 'legacy' ]; then
+  for context in "${!LEGACY_IMAGES[@]}"; do
+    tags="${LEGACY_IMAGES[${context}]}"
+    build_image "${context}" "${tags}"
+  done
+fi
+
+echo 'Build completed'
