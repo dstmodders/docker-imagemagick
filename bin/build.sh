@@ -7,6 +7,7 @@
 #
 # Flags:
 #   -b, --build-cpus <number>   set the number of CPUs to use for parallel builds
+#   -p, --progress <string>     set type of progress output ("auto", "plain", "tty", "rawjson") (default "auto")
 #   -h, --help                  help for build.sh
 #
 # Image Sets:
@@ -43,6 +44,7 @@ readonly LEGACY_IMAGES
 
 # define flags
 FLAG_BUILD_CPUS=''
+FLAG_PROGRESS=''
 
 # define build set
 BUILD_SET='all'
@@ -100,6 +102,7 @@ build_image() {
   local build_arg=""
   local build_cmd=""
   local platform_arg=""
+  local progress_arg=""
 
   printf 'Building image(s) for context: %s\n\n' "${context_path}"
 
@@ -126,6 +129,12 @@ build_image() {
     printf -- '--> Using `%s` as build arguments\n' "${build_arg}"
   fi
 
+  if [ -n "${FLAG_PROGRESS}" ]; then
+    progress_arg="--progress=${FLAG_PROGRESS}"
+    # shellcheck disable=SC2016
+    printf -- '--> Using `%s` for progress output\n' "${progress_arg}"
+  fi
+
   local TAG_ARGS=""
   for tag in ${tags}; do
     TAG_ARGS="${TAG_ARGS} -t ${IMAGE_NAME}:${tag}"
@@ -133,7 +142,7 @@ build_image() {
 
   echo ''
   # shellcheck disable=SC2086
-  ${build_cmd} ${platform_arg} ${TAG_ARGS} ${build_arg} "${context_path}"
+  ${build_cmd} ${platform_arg} ${progress_arg} ${TAG_ARGS} ${build_arg} "${context_path}"
   echo '---'
 }
 
@@ -141,9 +150,24 @@ cd "${BASE_DIR}/.." || exit 1
 
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
+    -b=*|--build-cpus=*)
+      FLAG_BUILD_CPUS="${1#*=}"
+      ;;
     -b|--build-cpus)
       if [ -n "$2" ] && ! [[ "$2" =~ ^- ]]; then
         FLAG_BUILD_CPUS="$2"
+        shift
+      else
+        echo "Error: Argument for $1 is missing or invalid." >&2
+        exit 1
+      fi
+      ;;
+    -p=*|--progress=*)
+      FLAG_PROGRESS="${1#*=}"
+      ;;
+    -p|--progress)
+      if [ -n "$2" ] && ! [[ "$2" =~ ^- ]]; then
+        FLAG_PROGRESS="$2"
         shift
       else
         echo "Error: Argument for $1 is missing or invalid." >&2
@@ -174,6 +198,7 @@ done
 
 readonly BUILD_SET
 readonly FLAG_BUILD_CPUS
+readonly FLAG_PROGRESS
 
 if [[ "${BUILD_SET}" != 'all' && "${BUILD_SET}" != 'latest' && "${BUILD_SET}" != 'legacy' ]]; then
   print_error 'invalid image set specified'
