@@ -95,6 +95,34 @@ print_error() {
   echo '' >&2
 }
 
+set_flag_build_cpus() {
+  local value="$1"
+
+  if [ -n "${value}" ] && [[ "${value}" =~ ^[0-9]+$ ]]; then
+    FLAG_BUILD_CPUS="${value}"
+    readonly FLAG_BUILD_CPUS
+    return 0
+  else
+    # shellcheck disable=SC2016
+    print_error 'flag `--build-cpus` value should be a number'
+    exit 1
+  fi
+}
+
+set_flag_progress() {
+  local value="$1"
+
+  if [ -n "${value}" ] && [[ "${value}" =~ ^([0-9]+|auto|plain|tty|rawjson)$ ]]; then
+    FLAG_PROGRESS="${value}"
+    readonly FLAG_PROGRESS
+    return 0
+  else
+    # shellcheck disable=SC2016
+    print_error 'flag `--progress` value should be one of: "auto", "plain", "tty", "rawjson"'
+    exit 1
+  fi
+}
+
 build_image() {
   local context_path="$1"
   local tags="$2"
@@ -151,28 +179,18 @@ cd "${BASE_DIR}/.." || exit 1
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
     -b=*|--build-cpus=*)
-      FLAG_BUILD_CPUS="${1#*=}"
+      set_flag_build_cpus "${1#*=}"
       ;;
     -b|--build-cpus)
-      if [ -n "$2" ] && ! [[ "$2" =~ ^- ]]; then
-        FLAG_BUILD_CPUS="$2"
-        shift
-      else
-        echo "Error: Argument for $1 is missing or invalid." >&2
-        exit 1
-      fi
+      set_flag_build_cpus "${2:-}"
+      shift
       ;;
     -p=*|--progress=*)
-      FLAG_PROGRESS="${1#*=}"
+      set_flag_progress "${1#*=}"
       ;;
     -p|--progress)
-      if [ -n "$2" ] && ! [[ "$2" =~ ^- ]]; then
-        FLAG_PROGRESS="$2"
-        shift
-      else
-        echo "Error: Argument for $1 is missing or invalid." >&2
-        exit 1
-      fi
+      set_flag_progress "${2:-}"
+      shift
       ;;
     -h|--help)
       usage
@@ -197,7 +215,6 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 readonly BUILD_SET
-readonly FLAG_BUILD_CPUS
 readonly FLAG_PROGRESS
 
 if [[ "${BUILD_SET}" != 'all' && "${BUILD_SET}" != 'latest' && "${BUILD_SET}" != 'legacy' ]]; then
