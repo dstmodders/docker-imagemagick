@@ -2,6 +2,7 @@ FROM debian:bookworm-slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+ARG BUILD_CPUS
 ARG IMAGEMAGICK_VERSION="6.9.13-22"
 ENV IMAGEMAGICK_VERSION="${IMAGEMAGICK_VERSION}"
 
@@ -40,11 +41,15 @@ RUN groupadd --gid 1000 imagemagick \
     libwebpdemux2='1.2.4-0.2+deb12u1' \
     libwebpmux3='1.2.4-0.2+deb12u1' \
   # ImageMagick
-  && git clone "https://github.com/ImageMagick/ImageMagick$([[ "${IMAGEMAGICK_VERSION}" =~ ^6 ]] && echo '6').git" /tmp/ImageMagick/ \
+  && git clone -b "${IMAGEMAGICK_VERSION}" --depth 1 \
+    "https://github.com/ImageMagick/ImageMagick$([ "$(printf '%s' "${IMAGEMAGICK_VERSION}" | cut -c 1)" -eq '6' ] && echo '6').git" \
+    /tmp/ImageMagick/ \
   && cd /tmp/ImageMagick/ \
-  && git checkout "${IMAGEMAGICK_VERSION}" \
   && ./configure --with-perl --with-png \
-  && make \
+  && : "${BUILD_CPUS:=$(( $(nproc) > 1 ? $(nproc) / 2 : 1 ))}" \
+  && echo "BUILD_CPUS=${BUILD_CPUS}" \
+  && echo "make -j${BUILD_CPUS}" \
+  && make -j"${BUILD_CPUS}" \
   && make install \
   && ldconfig /usr/local/lib/ \
   # clean
