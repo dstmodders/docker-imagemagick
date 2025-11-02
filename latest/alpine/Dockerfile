@@ -2,6 +2,7 @@ FROM alpine:3.19.1
 
 SHELL ["/bin/ash", "-eo", "pipefail", "-c"]
 
+ARG BUILD_CPUS
 ARG IMAGEMAGICK_VERSION="7.1.1-44"
 ENV IMAGEMAGICK_VERSION="${IMAGEMAGICK_VERSION}"
 
@@ -49,11 +50,15 @@ RUN addgroup -g 1000 imagemagick \
     # WebP
     libwebp-dev='1.3.2-r0' \
   # ImageMagick
-  && git clone "https://github.com/ImageMagick/ImageMagick$([ "$(printf '%s' "${IMAGEMAGICK_VERSION}" | cut -c 1)" -eq '6' ] && echo '6').git" /tmp/ImageMagick/ \
+  && git clone -b "${IMAGEMAGICK_VERSION}" --depth 1 \
+    "https://github.com/ImageMagick/ImageMagick$([ "$(printf '%s' "${IMAGEMAGICK_VERSION}" | cut -c 1)" -eq '6' ] && echo '6').git" \
+    /tmp/ImageMagick/ \
   && cd /tmp/ImageMagick/ \
-  && git checkout "${IMAGEMAGICK_VERSION}" \
   && ./configure --with-perl --with-png \
-  && make \
+  && : "${BUILD_CPUS:=$(( $(nproc) > 1 ? $(nproc) / 2 : 1 ))}" \
+  && echo "BUILD_CPUS=${BUILD_CPUS}" \
+  && echo "make -j${BUILD_CPUS}" \
+  && make -j"${BUILD_CPUS}" \
   && make install \
   && ldconfig /usr/local/lib/ \
   # clean
