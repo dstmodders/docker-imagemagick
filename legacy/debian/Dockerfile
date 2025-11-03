@@ -1,4 +1,4 @@
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
@@ -11,35 +11,35 @@ RUN groupadd --gid 1000 imagemagick \
   && useradd --uid 1000 --gid imagemagick --shell /bin/bash --no-create-home imagemagick \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
-    build-essential='12.9' \
-    ca-certificates='20230311+deb12u1' \
-    git='1:2.39.5-0+deb12u2' \
-    libgomp1='12.2.0-14+deb12u1' \
-    libzip-dev='1.7.3-1+b1' \
-    pkg-config='1.8.1-1' \
+    build-essential='12.12' \
+    ca-certificates='20250419' \
+    git='1:2.47.3-0+deb13u1' \
+    libgomp1='14.2.0-19' \
+    libzip-dev='1.11.3-2' \
+    pkg-config='1.8.1-4' \
     # Perl
-    libperl-dev='5.36.0-7+deb12u3' \
-    libperl5.36='5.36.0-7+deb12u3' \
+    libperl-dev='5.40.1-6' \
+    libperl5.40='5.40.1-6' \
     # Fonts
-    fonts-dejavu='2.37-6' \
-    libfontconfig1-dev='2.14.1-4' \
-    libfontconfig1='2.14.1-4' \
-    libfreetype6-dev='2.12.1+dfsg-5+deb12u4' \
-    libfreetype6='2.12.1+dfsg-5+deb12u4' \
+    fonts-dejavu='2.37-8' \
+    libfontconfig1-dev='2.15.0-2.3' \
+    libfontconfig1='2.15.0-2.3' \
+    libfreetype-dev='2.13.3+dfsg-1' \
+    libfreetype6='2.13.3+dfsg-1' \
     # JPEG
-    libjpeg62-turbo-dev='1:2.1.5-2' \
-    libjpeg62-turbo='1:2.1.5-2' \
+    libjpeg62-turbo-dev='1:2.1.5-4' \
+    libjpeg62-turbo='1:2.1.5-4' \
     # PNG
-    libpng-dev='1.6.39-2' \
-    libpng16-16='1.6.39-2' \
+    libpng-dev='1.6.48-1' \
+    libpng16-16t64='1.6.48-1' \
     # TIFF \
-    libtiff-dev='4.5.0-6+deb12u3' \
-    libtiff6='4.5.0-6+deb12u3' \
+    libtiff-dev='4.7.0-3+deb13u1' \
+    libtiff6='4.7.0-3+deb13u1' \
     # WebP \
-    libwebp-dev='1.2.4-0.2+deb12u1' \
-    libwebp7='1.2.4-0.2+deb12u1' \
-    libwebpdemux2='1.2.4-0.2+deb12u1' \
-    libwebpmux3='1.2.4-0.2+deb12u1' \
+    libwebp-dev='1.5.0-0.1' \
+    libwebp7='1.5.0-0.1' \
+    libwebpdemux2='1.5.0-0.1' \
+    libwebpmux3='1.5.0-0.1' \
   # ImageMagick
   && git clone -b "${IMAGEMAGICK_VERSION}" --depth 1 \
     "https://github.com/ImageMagick/ImageMagick$([ "$(printf '%s' "${IMAGEMAGICK_VERSION}" | cut -c 1)" -eq '6' ] && echo '6').git" \
