@@ -15,7 +15,7 @@ set -euo pipefail
 # define constants
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 DOCKER_ALPINE_IMAGE='alpine:3.22.2'
-DOCKER_DEBIAN_IMAGE='debian:bookworm-slim'
+DOCKER_DEBIAN_IMAGE='debian:trixie-slim'
 
 readonly BASE_DIR
 readonly DOCKER_ALPINE_IMAGE
