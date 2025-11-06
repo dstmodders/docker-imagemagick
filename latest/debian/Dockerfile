@@ -3,7 +3,7 @@ FROM debian:trixie-slim
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 ARG BUILD_CPUS
-ARG IMAGEMAGICK_VERSION="7.1.1-47"
+ARG IMAGEMAGICK_VERSION="7.1.2-0"
 ENV IMAGEMAGICK_VERSION="${IMAGEMAGICK_VERSION}"
 
 # hadolint ignore=DL3003
