@@ -63,13 +63,13 @@ PS:\> docker run --rm -v "${PWD}:/data/" dstmodders/imagemagick magick input.gif
 
 | Name                  | Image                  | Value                      | Description           |
 | --------------------- | ---------------------- | -------------------------- | --------------------- |
-| `IMAGEMAGICK_VERSION` | `latest`<br />`legacy` | `7.1.2-3`<br />`6.9.13-30` | [ImageMagick] version |
+| `IMAGEMAGICK_VERSION` | `latest`<br />`legacy` | `7.1.2-5`<br />`6.9.13-30` | [ImageMagick] version |
 
 ## Supported build arguments
 
 | Name                  | Image                  | Default                    | Description                |
 | --------------------- | ---------------------- | -------------------------- | -------------------------- |
-| `IMAGEMAGICK_VERSION` | `latest`<br />`legacy` | `7.1.2-3`<br />`6.9.13-30` | Sets [ImageMagick] version |
+| `IMAGEMAGICK_VERSION` | `latest`<br />`legacy` | `7.1.2-5`<br />`6.9.13-30` | Sets [ImageMagick] version |
 
 ## Supported architectures
 
