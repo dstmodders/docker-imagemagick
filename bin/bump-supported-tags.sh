@@ -127,7 +127,7 @@ print_latest_tags() {
   done
 }
 
-# reference: legacy-6.9.13-31-alpine, legacy-6.9.13-31, legacy-alpine, legacy-latest, legacy
+# reference: legacy-6.9.13-32-alpine, legacy-6.9.13-32, legacy-alpine, legacy-latest, legacy
 print_legacy_tags() {
   for key in "${LEGACY_VERSIONS_KEYS[@]}"; do
     for dist in "${DISTS[@]}"; do
