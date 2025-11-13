@@ -109,7 +109,7 @@ print_latest_tags() {
       latest="$(jq -r ".latest | .[${key}] | .latest" <<< "${JSON}")"
 
       tag_dist="${dist}"
-      tag_full="${version-${dist}}"
+      tag_full="${version}-${dist}"
       tag_version="${version}"
 
       tags=''
