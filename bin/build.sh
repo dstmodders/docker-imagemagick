@@ -217,6 +217,16 @@ done
 readonly BUILD_SET
 readonly FLAG_PROGRESS
 
+if ! which docker >/dev/null 2>&1; then
+  print_error 'Docker CLI is not installed'
+  exit 1
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  print_error 'Docker daemon is not running'
+  exit 1
+fi
+
 if [[ "${BUILD_SET}" != 'all' && "${BUILD_SET}" != 'latest' && "${BUILD_SET}" != 'legacy' ]]; then
   print_error 'invalid image set specified'
   usage
