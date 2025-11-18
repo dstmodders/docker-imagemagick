@@ -8,6 +8,7 @@
 # Flags:
 #   -c, --commit    commit changes
 #   -d, --dry-run   only check and don't apply or commit any changes
+#   -l, --list      only list packages and their current versions
 #   -h, --help      help for bump-packages.sh
 #
 set -euo pipefail
@@ -24,6 +25,7 @@ readonly DOCKER_DEBIAN_IMAGE
 # define flags
 FLAG_COMMIT=0
 FLAG_DRY_RUN=0
+FLAG_LIST=0
 
 usage() {
   awk '
@@ -208,11 +210,16 @@ update_alpine_dockerfile() {
   while IFS= read -r line; do
     package_name="$(echo "${line}" | cut -d '=' -f 1)"
     current_version="$(echo "${line}" | cut -d '=' -f 2)"
-    latest_version="$(get_latest_apk_package_version "${package_name}")"
-    update_package_in_dockerfile "${dockerfile}" "${package_name}" "${current_version}" "${latest_version}"
 
-    if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ] && [ "${current_version}" != "${latest_version}" ]; then
-      commit_list+=("- Bump ${package_name} from ${current_version} to ${latest_version}")
+    if [ "${FLAG_LIST}" -eq 0 ]; then
+      latest_version="$(get_latest_apk_package_version "${package_name}")"
+      update_package_in_dockerfile "${dockerfile}" "${package_name}" "${current_version}" "${latest_version}"
+
+      if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ] && [ "${current_version}" != "${latest_version}" ]; then
+        commit_list+=("- Bump ${package_name} from ${current_version} to ${latest_version}")
+      fi
+    else
+      printf '%s %s\n' "${package_name}" "${current_version}"
     fi
   done <<< "$(get_packages_from_dockerfile "${dockerfile}")"
 
@@ -232,11 +239,16 @@ update_debian_dockerfile() {
   while IFS= read -r line; do
     package_name="$(echo "${line}" | cut -d '=' -f 1)"
     current_version="$(echo "${line}" | cut -d '=' -f 2)"
-    latest_version="$(get_latest_apt_package_version "${package_name}")"
-    update_package_in_dockerfile "${dockerfile}" "${package_name}" "${current_version}" "${latest_version}"
 
-    if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ] && [ "${current_version}" != "${latest_version}" ]; then
-      commit_list+=("- Bump ${package_name} from ${current_version} to ${latest_version}")
+    if [ "${FLAG_LIST}" -eq 0 ]; then
+      latest_version="$(get_latest_apt_package_version "${package_name}")"
+      update_package_in_dockerfile "${dockerfile}" "${package_name}" "${current_version}" "${latest_version}"
+
+      if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ] && [ "${current_version}" != "${latest_version}" ]; then
+        commit_list+=("- Bump ${package_name} from ${current_version} to ${latest_version}")
+      fi
+    else
+      printf '%s %s\n' "${package_name}" "${current_version}"
     fi
   done <<< "$(get_packages_from_dockerfile "${dockerfile}")"
 
@@ -263,6 +275,9 @@ while [ $# -gt 0 ]; do
       usage
       exit 0
       ;;
+    -l|--list)
+      FLAG_LIST=1
+      ;;
     -*)
       print_error 'unrecognized flag'
       usage
@@ -276,14 +291,17 @@ done
 
 readonly FLAG_COMMIT
 readonly FLAG_DRY_RUN
+readonly FLAG_LIST
 
-print_title 'DOCKER'
-echo 'Pulling Docker images...'
-echo '---'
-docker pull "${DOCKER_ALPINE_IMAGE}"
-echo '---'
-docker pull "${DOCKER_DEBIAN_IMAGE}"
-printf '\n'
+if [ "${FLAG_LIST}" -eq 0 ]; then
+  print_title 'DOCKER'
+  echo 'Pulling Docker images...'
+  echo '---'
+  docker pull "${DOCKER_ALPINE_IMAGE}"
+  echo '---'
+  docker pull "${DOCKER_DEBIAN_IMAGE}"
+  printf '\n'
+fi
 
 print_title 'LATEST ALPINE PACKAGES'
 update_alpine_dockerfile './latest/alpine/Dockerfile' 'Bump packages in latest alpine image'
