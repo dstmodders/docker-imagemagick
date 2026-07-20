@@ -28,9 +28,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Set up Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         id: node
         with:
           node-version: 24.11.1
@@ -56,25 +56,25 @@ jobs:
         id: prettier
         run: echo "issues=$(prettier --list-different . | wc -l)" >> "$GITHUB_OUTPUT"
       - name: Lint using Hadolint (latest Alpine)
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         id: hadolint-latest-alpine
         with:
           dockerfile: ./latest/alpine/Dockerfile
           no-fail: true
       - name: Lint using Hadolint (latest Debian)
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         id: hadolint-latest-debian
         with:
           dockerfile: ./latest/debian/Dockerfile
           no-fail: true
       - name: Lint using Hadolint (legacy Alpine)
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         id: hadolint-legacy-alpine
         with:
           dockerfile: ./legacy/alpine/Dockerfile
           no-fail: true
       - name: Lint using Hadolint (legacy Debian)
-        uses: hadolint/hadolint-action@v3.1.0
+        uses: hadolint/hadolint-action@v3.3.0
         id: hadolint-legacy-debian
         with:
           dockerfile: ./legacy/debian/Dockerfile
@@ -130,7 +130,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
       - name: Send Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' }}
@@ -160,14 +160,14 @@ jobs:
             dstmodders/imagemagick:legacy \
             /bin/sh -c './tests.sh; mv ./result/* /tmp/result/'
       - name: Upload latest test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: tests-latest-results-${{ github.run_id }}
           path: ./tests-latest-results
           retention-days: 7
       - name: Upload legacy test results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: tests-legacy-results-${{ github.run_id }}
