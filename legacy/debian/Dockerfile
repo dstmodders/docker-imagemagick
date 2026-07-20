@@ -24,17 +24,17 @@ RUN groupadd --gid 1000 imagemagick \
     fonts-dejavu='2.37-8' \
     libfontconfig1-dev='2.15.0-2.3' \
     libfontconfig1='2.15.0-2.3' \
-    libfreetype-dev='2.13.3+dfsg-1' \
-    libfreetype6='2.13.3+dfsg-1' \
+    libfreetype-dev='2.13.3+dfsg-1+deb13u1' \
+    libfreetype6='2.13.3+dfsg-1+deb13u1' \
     # JPEG
     libjpeg62-turbo-dev='1:2.1.5-4' \
     libjpeg62-turbo='1:2.1.5-4' \
     # PNG
-    libpng-dev='1.6.48-1' \
-    libpng16-16t64='1.6.48-1' \
+    libpng-dev='1.6.48-1+deb13u5' \
+    libpng16-16t64='1.6.48-1+deb13u5' \
     # TIFF \
-    libtiff-dev='4.7.0-3+deb13u1' \
-    libtiff6='4.7.0-3+deb13u1' \
+    libtiff-dev='4.7.0-3+deb13u3' \
+    libtiff6='4.7.0-3+deb13u3' \
     # WebP \
     libwebp-dev='1.5.0-0.1' \
     libwebp7='1.5.0-0.1' \
