@@ -36,7 +36,7 @@ jobs:
             echo "legacy=$(jq -cM .legacy <<< "$json")"
           } >> "$GITHUB_OUTPUT"
 
-  legacy:
+  legacy-build:
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
@@ -68,15 +68,168 @@ jobs:
           registry: ${{ secrets.PRIVATE_REGISTRY_HOST }}
           username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
           password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
+      - name: Build a Debian image
+        uses: docker/build-push-action@v7
+        id: debian
+        with:
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian,mode=max
+          context: .
+          file: ./legacy/debian/Dockerfile
+          labels: maintainer=victor@popkov.me
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          provenance: false
+          pull: true
+          push: true
+          sbom: false
+          tags: |
+            ${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian
+      - name: Build an Alpine image
+        uses: docker/build-push-action@v7
+        id: alpine
+        with:
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine,mode=max
+          context: .
+          file: ./legacy/alpine/Dockerfile
+          labels: maintainer=victor@popkov.me
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          provenance: false
+          pull: true
+          push: true
+          sbom: false
+          tags: |
+            ${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine
+      - name: Update Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' && always() }}
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            ImageMagick version: ${{ matrix.image.version }}
+          status: ${{ job.status }}
+          timestamp: ${{ steps.slack.outputs.slack-timestamp }}
+
+  latest-build:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        image: ${{ fromJSON(needs.prepare.outputs.latest) }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Send Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' }}
+        id: slack
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            ImageMagick version: ${{ matrix.image.version }}
+          status: in-progress
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          image: tonistiigi/binfmt:qemu-v10.2.3-68
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Login to private registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ secrets.PRIVATE_REGISTRY_HOST }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
+      - name: Build a Debian image
+        uses: docker/build-push-action@v7
+        id: debian
+        with:
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian,mode=max
+          context: .
+          file: ./latest/debian/Dockerfile
+          labels: maintainer=victor@popkov.me
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          provenance: false
+          pull: true
+          push: true
+          sbom: false
+          tags: |
+            ${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian
+      - name: Build an Alpine image
+        uses: docker/build-push-action@v7
+        id: alpine
+        with:
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine,mode=max
+          context: .
+          file: ./latest/alpine/Dockerfile
+          labels: maintainer=victor@popkov.me
+          platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          provenance: false
+          pull: true
+          push: true
+          sbom: false
+          tags: |
+            ${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine
+      - name: Update Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' && always() }}
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            ImageMagick version: ${{ matrix.image.version }}
+          status: ${{ job.status }}
+          timestamp: ${{ steps.slack.outputs.slack-timestamp }}
+
+  legacy-push:
+    needs: [prepare, legacy-build]
+    runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
+    strategy:
+      max-parallel: 1
+      matrix:
+        image: ${{ fromJSON(needs.prepare.outputs.legacy) }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Send Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' }}
+        id: slack
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            ImageMagick version: ${{ matrix.image.version }}
+          status: in-progress
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v4
+        with:
+          image: tonistiigi/binfmt:qemu-v10.2.3-68
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Login to private registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ secrets.PRIVATE_REGISTRY_HOST }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
       - name: Login to Docker Hub
         uses: docker/login-action@v4
-        if: ${{ github.ref == 'refs/heads/main' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GHCR
         uses: docker/login-action@v4
-        if: ${{ github.ref == 'refs/heads/main' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -95,22 +248,18 @@ jobs:
             ${{ matrix.image.latest && 'type=raw,value=debian' || '' }}
       - name: Build a Debian image
         uses: docker/build-push-action@v7
-        id: debian
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian
-          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian,mode=max
           context: .
           file: ./legacy/debian/Dockerfile
           labels: ${{ steps.debian-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
           provenance: false
           pull: true
-          push: ${{ github.ref == 'refs/heads/develop' || !env.ACT }}
+          push: ${{ !env.ACT }}
           sbom: false
-          tags: |
-            ${{ github.ref != 'refs/heads/develop' && steps.debian-meta.outputs.tags || '' }}
-            ${{ github.ref == 'refs/heads/develop' && format('{0}/imagemagick:legacy-{1}-debian', secrets.PRIVATE_REGISTRY_HOST, matrix.image.version) || '' }}
+          tags: ${{ steps.debian-meta.outputs.tags }}
       - name: Prepare Docker meta for an Alpine image
         uses: docker/metadata-action@v6
         id: alpine-meta
@@ -129,22 +278,18 @@ jobs:
             ${{ matrix.image.latest && 'type=raw,prefix=,value=legacy' || '' }}
       - name: Build an Alpine image
         uses: docker/build-push-action@v7
-        id: alpine
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine
-          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine,mode=max
           context: .
           file: ./legacy/alpine/Dockerfile
           labels: ${{ steps.alpine-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
           provenance: false
           pull: true
-          push: ${{ github.ref == 'refs/heads/develop' || !env.ACT }}
+          push: ${{ !env.ACT }}
           sbom: false
-          tags: |
-            ${{ github.ref != 'refs/heads/develop' && steps.alpine-meta.outputs.tags || '' }}
-            ${{ github.ref == 'refs/heads/develop' && format('{0}/imagemagick:legacy-{1}-alpine', secrets.PRIVATE_REGISTRY_HOST, matrix.image.version) || '' }}
+          tags: ${{ steps.alpine-meta.outputs.tags }}
       - name: Update Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' && always() }}
@@ -156,9 +301,10 @@ jobs:
           status: ${{ job.status }}
           timestamp: ${{ steps.slack.outputs.slack-timestamp }}
 
-  latest:
-    needs: [prepare, legacy]
+  latest-push:
+    needs: [prepare, latest-build, legacy-push]
     runs-on: ubuntu-latest
+    if: ${{ github.ref == 'refs/heads/main' }}
     strategy:
       max-parallel: 1
       matrix:
@@ -190,13 +336,11 @@ jobs:
           password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
       - name: Login to Docker Hub
         uses: docker/login-action@v4
-        if: ${{ github.ref == 'refs/heads/main' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GHCR
         uses: docker/login-action@v4
-        if: ${{ github.ref == 'refs/heads/main' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -214,22 +358,18 @@ jobs:
             ${{ matrix.image.latest && 'type=raw,value=debian' || '' }}
       - name: Build a Debian image
         uses: docker/build-push-action@v7
-        id: debian
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian
-          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian,mode=max
           context: .
           file: ./latest/debian/Dockerfile
           labels: ${{ steps.debian-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
           provenance: false
           pull: true
-          push: ${{ github.ref == 'refs/heads/develop' || !env.ACT }}
+          push: ${{ !env.ACT }}
           sbom: false
-          tags: |
-            ${{ github.ref != 'refs/heads/develop' && steps.debian-meta.outputs.tags || '' }}
-            ${{ github.ref == 'refs/heads/develop' && format('{0}/imagemagick:{1}-debian', secrets.PRIVATE_REGISTRY_HOST, matrix.image.version) || '' }}
+          tags: ${{ steps.debian-meta.outputs.tags }}
       - name: Prepare Docker meta for an Alpine image
         uses: docker/metadata-action@v6
         id: alpine-meta
@@ -245,22 +385,18 @@ jobs:
             ${{ matrix.image.latest && 'type=raw,value=alpine' || '' }}
       - name: Build an Alpine image
         uses: docker/build-push-action@v7
-        id: alpine
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine
-          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine,mode=max
           context: .
           file: ./latest/alpine/Dockerfile
           labels: ${{ steps.alpine-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
           provenance: false
           pull: true
-          push: ${{ github.ref == 'refs/heads/develop' || !env.ACT }}
+          push: ${{ !env.ACT }}
           sbom: false
-          tags: |
-            ${{ github.ref != 'refs/heads/develop' && steps.alpine-meta.outputs.tags || '' }}
-            ${{ github.ref == 'refs/heads/develop' && format('{0}/imagemagick:{1}-alpine', secrets.PRIVATE_REGISTRY_HOST, matrix.image.version) || '' }}
+          tags: ${{ steps.alpine-meta.outputs.tags }}
       - name: Update Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' && always() }}
