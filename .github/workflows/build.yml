@@ -46,19 +46,6 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v7
-      - name: Set general outputs
-        id: general
-        run: |
-          dockerfiles_version='${{ hashFiles('legacy/**/Dockerfile') }}'
-          dockerfiles_version_short="$(echo "$dockerfiles_version" | cut -c 1-7)"
-
-          echo "Dockerfiles version: $dockerfiles_version"
-          echo "Dockerfiles version (short): $dockerfiles_version_short"
-
-          {
-            echo "dockerfiles-version=$dockerfiles_version"
-            echo "dockerfiles-version-short=$dockerfiles_version_short"
-          } >> "$GITHUB_OUTPUT"
       - name: Send Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' }}
@@ -75,15 +62,21 @@ jobs:
           image: tonistiigi/binfmt:qemu-v10.2.3-68
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
+      - name: Login to private registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ secrets.PRIVATE_REGISTRY_HOST }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
       - name: Login to Docker Hub
         uses: docker/login-action@v4
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.ref == 'refs/heads/main' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GHCR
         uses: docker/login-action@v4
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.ref == 'refs/heads/main' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -100,28 +93,24 @@ jobs:
           tags: |
             type=raw,value=${{ matrix.image.version }}-debian
             ${{ matrix.image.latest && 'type=raw,value=debian' || '' }}
-      - name: Cache Docker layers (Debian)
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.buildx-debian-cache
-          key: ${{ format('legacy-{0}-debian-{1}', matrix.image.version, steps.general.outputs.dockerfiles-version-short) }}
-          restore-keys: |
-            legacy-${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles-version-short }}
-            legacy-${{ matrix.image.version }}-debian-
       - name: Build a Debian image
         uses: docker/build-push-action@v7
         id: debian
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=local,src=/tmp/.buildx-debian-cache
-          cache-to: type=local,dest=/tmp/.buildx-debian-cache-new,mode=max
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian,mode=max
           context: .
           file: ./legacy/debian/Dockerfile
           labels: ${{ steps.debian-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          provenance: false
           pull: true
-          push: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
-          tags: ${{ steps.debian-meta.outputs.tags }}
+          push: ${{ github.ref == 'refs/heads/develop' || !env.ACT }}
+          sbom: false
+          tags: |
+            ${{ github.ref != 'refs/heads/develop' && steps.debian-meta.outputs.tags || '' }}
+            ${{ github.ref == 'refs/heads/develop' && format('{0}/imagemagick:legacy-{1}-debian', secrets.PRIVATE_REGISTRY_HOST, matrix.image.version) || '' }}
       - name: Prepare Docker meta for an Alpine image
         uses: docker/metadata-action@v6
         id: alpine-meta
@@ -138,33 +127,24 @@ jobs:
             type=raw,value=${{ matrix.image.version }}
             ${{ matrix.image.latest && 'type=raw,value=alpine' || '' }}
             ${{ matrix.image.latest && 'type=raw,prefix=,value=legacy' || '' }}
-      - name: Cache Docker layers (Alpine)
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.buildx-alpine-cache
-          key: ${{ format('legacy-{0}-alpine-{1}', matrix.image.version, steps.general.outputs.dockerfiles-version-short) }}
-          restore-keys: |
-            legacy-${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles-version-short }}
-            legacy-${{ matrix.image.version }}-alpine-
       - name: Build an Alpine image
         uses: docker/build-push-action@v7
         id: alpine
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=local,src=/tmp/.buildx-alpine-cache
-          cache-to: type=local,dest=/tmp/.buildx-alpine-cache-new,mode=max
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine,mode=max
           context: .
           file: ./legacy/alpine/Dockerfile
           labels: ${{ steps.alpine-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          provenance: false
           pull: true
-          push: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
-          tags: ${{ steps.alpine-meta.outputs.tags }}
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-debian-cache /tmp/.buildx-alpine-cache
-          mv /tmp/.buildx-debian-cache-new /tmp/.buildx-debian-cache
-          mv /tmp/.buildx-alpine-cache-new /tmp/.buildx-alpine-cache
+          push: ${{ github.ref == 'refs/heads/develop' || !env.ACT }}
+          sbom: false
+          tags: |
+            ${{ github.ref != 'refs/heads/develop' && steps.alpine-meta.outputs.tags || '' }}
+            ${{ github.ref == 'refs/heads/develop' && format('{0}/imagemagick:legacy-{1}-alpine', secrets.PRIVATE_REGISTRY_HOST, matrix.image.version) || '' }}
       - name: Update Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' && always() }}
@@ -186,19 +166,6 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v7
-      - name: Set general outputs
-        id: general
-        run: |
-          dockerfiles_version='${{ hashFiles('latest/**/Dockerfile') }}'
-          dockerfiles_version_short="$(echo "$dockerfiles_version" | cut -c 1-7)"
-
-          echo "Dockerfiles version: $dockerfiles_version"
-          echo "Dockerfiles version (short): $dockerfiles_version_short"
-
-          {
-            echo "dockerfiles-version=$dockerfiles_version"
-            echo "dockerfiles-version-short=$dockerfiles_version_short"
-          } >> "$GITHUB_OUTPUT"
       - name: Send Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' }}
@@ -215,15 +182,21 @@ jobs:
           image: tonistiigi/binfmt:qemu-v10.2.3-68
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
+      - name: Login to private registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ secrets.PRIVATE_REGISTRY_HOST }}
+          username: ${{ secrets.PRIVATE_REGISTRY_USERNAME }}
+          password: ${{ secrets.PRIVATE_REGISTRY_PASSWORD }}
       - name: Login to Docker Hub
         uses: docker/login-action@v4
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.ref == 'refs/heads/main' }}
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GHCR
         uses: docker/login-action@v4
-        if: ${{ github.event_name != 'pull_request' }}
+        if: ${{ github.ref == 'refs/heads/main' }}
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
@@ -239,28 +212,24 @@ jobs:
           tags: |
             type=raw,value=${{ matrix.image.version }}-debian
             ${{ matrix.image.latest && 'type=raw,value=debian' || '' }}
-      - name: Cache Docker layers (Debian)
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.buildx-debian-cache
-          key: ${{ format('{0}-debian-{1}', matrix.image.version, steps.general.outputs.dockerfiles-version-short) }}
-          restore-keys: |
-            ${{ matrix.image.version }}-debian-${{ steps.general.outputs.dockerfiles-version-short }}
-            ${{ matrix.image.version }}-debian-
       - name: Build a Debian image
         uses: docker/build-push-action@v7
         id: debian
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=local,src=/tmp/.buildx-debian-cache
-          cache-to: type=local,dest=/tmp/.buildx-debian-cache-new,mode=max
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian,mode=max
           context: .
           file: ./latest/debian/Dockerfile
           labels: ${{ steps.debian-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          provenance: false
           pull: true
-          push: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
-          tags: ${{ steps.debian-meta.outputs.tags }}
+          push: ${{ github.ref == 'refs/heads/develop' || !env.ACT }}
+          sbom: false
+          tags: |
+            ${{ github.ref != 'refs/heads/develop' && steps.debian-meta.outputs.tags || '' }}
+            ${{ github.ref == 'refs/heads/develop' && format('{0}/imagemagick:{1}-debian', secrets.PRIVATE_REGISTRY_HOST, matrix.image.version) || '' }}
       - name: Prepare Docker meta for an Alpine image
         uses: docker/metadata-action@v6
         id: alpine-meta
@@ -274,33 +243,24 @@ jobs:
             type=raw,value=${{ matrix.image.version }}-alpine
             type=raw,value=${{ matrix.image.version }}
             ${{ matrix.image.latest && 'type=raw,value=alpine' || '' }}
-      - name: Cache Docker layers (Alpine)
-        uses: actions/cache@v6
-        with:
-          path: /tmp/.buildx-alpine-cache
-          key: ${{ format('{0}-alpine-{1}', matrix.image.version, steps.general.outputs.dockerfiles-version-short) }}
-          restore-keys: |
-            ${{ matrix.image.version }}-alpine-${{ steps.general.outputs.dockerfiles-version-short }}
-            ${{ matrix.image.version }}-alpine-
       - name: Build an Alpine image
         uses: docker/build-push-action@v7
         id: alpine
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=local,src=/tmp/.buildx-alpine-cache
-          cache-to: type=local,dest=/tmp/.buildx-alpine-cache-new,mode=max
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine,mode=max
           context: .
           file: ./latest/alpine/Dockerfile
           labels: ${{ steps.alpine-meta.outputs.labels }}
           platforms: linux/amd64,linux/386,linux/arm64,linux/arm/v7
+          provenance: false
           pull: true
-          push: ${{ !env.ACT && github.ref == 'refs/heads/main' }}
-          tags: ${{ steps.alpine-meta.outputs.tags }}
-      - name: Move cache
-        run: |
-          rm -rf /tmp/.buildx-debian-cache /tmp/.buildx-alpine-cache
-          mv /tmp/.buildx-debian-cache-new /tmp/.buildx-debian-cache
-          mv /tmp/.buildx-alpine-cache-new /tmp/.buildx-alpine-cache
+          push: ${{ github.ref == 'refs/heads/develop' || !env.ACT }}
+          sbom: false
+          tags: |
+            ${{ github.ref != 'refs/heads/develop' && steps.alpine-meta.outputs.tags || '' }}
+            ${{ github.ref == 'refs/heads/develop' && format('{0}/imagemagick:{1}-alpine', secrets.PRIVATE_REGISTRY_HOST, matrix.image.version) || '' }}
       - name: Update Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' && always() }}
