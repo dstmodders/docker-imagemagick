@@ -73,8 +73,8 @@ jobs:
         id: debian
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian
-          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian,mode=max
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-legacy-${{ matrix.image.version }}-debian
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-legacy-${{ matrix.image.version }}-debian,mode=max
           context: .
           file: ./legacy/debian/Dockerfile
           labels: maintainer=victor@popkov.me
@@ -90,8 +90,8 @@ jobs:
         id: alpine
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine
-          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine,mode=max
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-legacy-${{ matrix.image.version }}-alpine
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-legacy-${{ matrix.image.version }}-alpine,mode=max
           context: .
           file: ./legacy/alpine/Dockerfile
           labels: maintainer=victor@popkov.me
@@ -150,8 +150,8 @@ jobs:
         id: debian
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian
-          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian,mode=max
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-${{ matrix.image.version }}-debian
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-${{ matrix.image.version }}-debian,mode=max
           context: .
           file: ./latest/debian/Dockerfile
           labels: maintainer=victor@popkov.me
@@ -167,8 +167,8 @@ jobs:
         id: alpine
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine
-          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine,mode=max
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-${{ matrix.image.version }}-alpine
+          cache-to: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-${{ matrix.image.version }}-alpine,mode=max
           context: .
           file: ./latest/alpine/Dockerfile
           labels: maintainer=victor@popkov.me
@@ -250,7 +250,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-debian
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-legacy-${{ matrix.image.version }}-debian
           context: .
           file: ./legacy/debian/Dockerfile
           labels: ${{ steps.debian-meta.outputs.labels }}
@@ -280,7 +280,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-legacy-${{ matrix.image.version }}-alpine
           context: .
           file: ./legacy/alpine/Dockerfile
           labels: ${{ steps.alpine-meta.outputs.labels }}
@@ -360,7 +360,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-debian
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-${{ matrix.image.version }}-debian
           context: .
           file: ./latest/debian/Dockerfile
           labels: ${{ steps.debian-meta.outputs.labels }}
@@ -387,7 +387,7 @@ jobs:
         uses: docker/build-push-action@v7
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
-          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine
+          cache-from: type=registry,ref=${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:cache-${{ matrix.image.version }}-alpine
           context: .
           file: ./latest/alpine/Dockerfile
           labels: ${{ steps.alpine-meta.outputs.labels }}
