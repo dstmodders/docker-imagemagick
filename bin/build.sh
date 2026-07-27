@@ -32,7 +32,7 @@ declare -A LEGACY_IMAGES=(
   ['legacy/debian']='legacy-debian'
 )
 
-if docker buildx version >/dev/null 2>&1; then
+if docker buildx version > /dev/null 2>&1; then
   BUILDX_AVAILABLE=1
 fi
 
@@ -178,21 +178,21 @@ cd "${BASE_DIR}/.." || exit 1
 
 while [[ "$#" -gt 0 ]]; do
   case "$1" in
-    -b=*|--build-cpus=*)
+    -b=* | --build-cpus=*)
       set_flag_build_cpus "${1#*=}"
       ;;
-    -b|--build-cpus)
+    -b | --build-cpus)
       set_flag_build_cpus "${2:-}"
       shift
       ;;
-    -p=*|--progress=*)
+    -p=* | --progress=*)
       set_flag_progress "${1#*=}"
       ;;
-    -p|--progress)
+    -p | --progress)
       set_flag_progress "${2:-}"
       shift
       ;;
-    -h|--help)
+    -h | --help)
       usage
       exit 0
       ;;
@@ -217,12 +217,12 @@ done
 readonly BUILD_SET
 readonly FLAG_PROGRESS
 
-if ! which docker >/dev/null 2>&1; then
+if ! which docker > /dev/null 2>&1; then
   print_error 'Docker CLI is not installed'
   exit 1
 fi
 
-if ! docker info >/dev/null 2>&1; then
+if ! docker info > /dev/null 2>&1; then
   print_error 'Docker daemon is not running'
   exit 1
 fi

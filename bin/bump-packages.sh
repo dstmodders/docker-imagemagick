@@ -81,10 +81,10 @@ print_title() {
 get_packages_from_dockerfile() {
   local dockerfile="$1"
   sed -n \
-      -e '/apk add --no-cache/,/&&/p' \
-      -e '/apk add --no-cache --virtual/,/&&/p' \
-      -e '/apt-get install -y --no-install-recommends/,/&&/p' \
-      "${dockerfile}" \
+    -e '/apk add --no-cache/,/&&/p' \
+    -e '/apk add --no-cache --virtual/,/&&/p' \
+    -e '/apt-get install -y --no-install-recommends/,/&&/p' \
+    "${dockerfile}" \
     | sed -E ':a;N;$!ba;s/\\\n/ /g' \
     | grep -oE '([a-zA-Z0-9+.]+(-[a-zA-Z0-9+.]+)*=[^[:space:]]+)' \
     | sed "s/'//g" \
@@ -265,17 +265,17 @@ cd "${BASE_DIR}/.." || exit 1
 while [ $# -gt 0 ]; do
   key="$1"
   case "${key}" in
-    -c|--commit)
+    -c | --commit)
       FLAG_COMMIT=1
       ;;
-    -d|--dry-run)
+    -d | --dry-run)
       FLAG_DRY_RUN=1
       ;;
-    -h|--help)
+    -h | --help)
       usage
       exit 0
       ;;
-    -l|--list)
+    -l | --list)
       FLAG_LIST=1
       ;;
     -*)

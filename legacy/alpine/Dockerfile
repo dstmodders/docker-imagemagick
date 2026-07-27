@@ -56,7 +56,7 @@ RUN addgroup -g 1000 imagemagick \
     /tmp/ImageMagick/ \
   && cd /tmp/ImageMagick/ \
   && ./configure --with-perl --with-png \
-  && : "${BUILD_CPUS:=$(( $(nproc) > 1 ? $(nproc) / 2 : 1 ))}" \
+  && : "${BUILD_CPUS:=$(($(nproc) > 1 ? $(nproc) / 2 : 1))}" \
   && echo "BUILD_CPUS=${BUILD_CPUS}" \
   && echo "make -j${BUILD_CPUS}" \
   && make -j"${BUILD_CPUS}" \
