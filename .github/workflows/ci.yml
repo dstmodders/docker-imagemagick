@@ -143,32 +143,39 @@ jobs:
           status: in-progress
       - name: Run tests
         run: |
-          mkdir -p ./tests/result/ ./tests-latest-results/ ./tests-legacy-results/
-          sudo chown -R 1000:1000 ./tests/ ./tests-latest-results/ ./tests-legacy-results/
+          # ImageMagick 7
           docker pull dstmodders/imagemagick:latest
-          docker run \
+          docker run --name test-latest \
+            --user root \
             -v './tests:/tests:rw' \
-            -v './tests-latest-results:/tmp/result:rw' \
             -w /tests/ \
             dstmodders/imagemagick:latest \
-            /bin/sh -c './tests.sh; mv ./result/* /tmp/result/'
+            /bin/sh -c './tests.sh'
+          mkdir -p ./tests-latest-results/
+          docker cp test-latest:/tests/result/. ./tests-latest-results/
+          docker rm test-latest
+
+          # ImageMagick 6
           docker pull dstmodders/imagemagick:legacy
-          docker run \
+          docker run --name test-legacy \
+            --user root \
             -v './tests:/tests:rw' \
-            -v './tests-legacy-results:/tmp/result:rw' \
             -w /tests/ \
             dstmodders/imagemagick:legacy \
-            /bin/sh -c './tests.sh; mv ./result/* /tmp/result/'
+            /bin/sh -c './tests.sh'
+          mkdir -p ./tests-legacy-results/
+          docker cp test-legacy:/tests/result/. ./tests-legacy-results/
+          docker rm test-legacy
       - name: Upload latest test results
         uses: actions/upload-artifact@v7
-        if: always()
+        if: ${{ always() && !env.ACT }}
         with:
           name: tests-latest-results-${{ github.run_id }}
           path: ./tests-latest-results
           retention-days: 7
       - name: Upload legacy test results
         uses: actions/upload-artifact@v7
-        if: always()
+        if: ${{ always() && !env.ACT }}
         with:
           name: tests-legacy-results-${{ github.run_id }}
           path: ./tests-legacy-results
