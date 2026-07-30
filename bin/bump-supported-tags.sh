@@ -101,7 +101,7 @@ print_url() {
   echo "- ${url}"
 }
 
-# reference: 7.1.2-19-alpine, 7.1.2-19, alpine, latest
+# reference: 7.1.2-20-alpine, 7.1.2-20, alpine, latest
 print_latest_tags() {
   for key in "${LATEST_VERSIONS_KEYS[@]}"; do
     for dist in "${DISTS[@]}"; do
