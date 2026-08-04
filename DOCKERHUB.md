@@ -12,8 +12,8 @@
 [Docker] images for both the latest and legacy [ImageMagick] versions.
 
 They are meant to be used as the base for other [Docker] images, much like how
-we use them in use them in our own endeavors such as [dstmodders/docker-ktools].
-However, you can use them directly as well.
+we use them in our own endeavors such as [dstmodders/docker-ktools]. However,
+you can use them directly as well.
 
 - [Usage](https://github.com/dstmodders/docker-imagemagick/blob/main/README.md#usage)
 - [Supported environment variables](https://github.com/dstmodders/docker-imagemagick/blob/main/README.md#supported-environment-variables)
