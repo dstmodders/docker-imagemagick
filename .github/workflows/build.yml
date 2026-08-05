@@ -40,7 +40,6 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
       matrix:
         image: ${{ fromJSON(needs.prepare.outputs.legacy) }}
     steps:
@@ -117,7 +116,6 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     strategy:
-      max-parallel: 1
       matrix:
         image: ${{ fromJSON(needs.prepare.outputs.latest) }}
     steps:
