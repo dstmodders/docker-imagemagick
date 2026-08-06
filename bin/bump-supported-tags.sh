@@ -114,12 +114,15 @@ print_latest_tags() {
 
       tags=''
       if [ "${dist}" == 'alpine' ]; then
-        tags="\`${tag_full}\`, \`${tag_version}\`, \`${tag_dist}\`"
+        tags="\`${tag_full}\`, \`${tag_version}\`"
         if [ "${latest}" == 'true' ]; then
-          tags="${tags}, \`latest\`"
+          tags="${tags}, \`${tag_dist}\`, \`latest\`"
         fi
       else
-        tags="\`${tag_full}\`, \`${tag_dist}\`"
+        tags="\`${tag_full}\`"
+        if [ "${latest}" == 'true' ]; then
+          tags="${tags}, \`${tag_dist}\`"
+        fi
       fi
 
       print_url "${tags}" "${COMMIT_ID}" "latest/${dist}"
@@ -140,12 +143,15 @@ print_legacy_tags() {
 
       tags=''
       if [ "${dist}" == 'alpine' ]; then
-        tags="\`${tag_full}\`, \`${tag_version}\`, \`${tag_dist}\`"
+        tags="\`${tag_full}\`, \`${tag_version}\`"
         if [ "${latest}" == 'true' ]; then
-          tags="${tags}, \`legacy-latest\`, \`legacy\`"
+          tags="${tags}, \`${tag_dist}\`, \`legacy-latest\`, \`legacy\`"
         fi
       else
-        tags="\`${tag_full}\`, \`${tag_dist}\`"
+        tags="\`${tag_full}\`"
+        if [ "${latest}" == 'true' ]; then
+          tags="${tags}, \`${tag_dist}\`"
+        fi
       fi
 
       print_url "${tags}" "${COMMIT_ID}" "legacy/${dist}"
