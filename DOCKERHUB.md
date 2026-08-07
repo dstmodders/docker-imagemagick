@@ -1,3 +1,10 @@
+**Note:** Due to possible inconsistencies in the upstream
+[ImageMagick6](https://github.com/ImageMagick/ImageMagick6) and
+[ImageMagick](https://github.com/ImageMagick/ImageMagick) repositories, some
+versions exist as GitHub tags but are not listed as releases (e.g., `7.1.2-14`
+in [ImageMagick](https://github.com/ImageMagick/ImageMagick)). These versions
+are still built and published.
+
 ![ImageMagick Logo](https://raw.githubusercontent.com/dstmodders/docker-imagemagick/main/logo.png)
 
 ## Supported tags and respective `Dockerfile` links
