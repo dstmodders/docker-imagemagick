@@ -9,6 +9,9 @@
 #   -c, --commit   commit changes
 #   -h, --help     help for bump-imagemagick.sh
 #
+# Environment Variables:
+#   GITHUB_TOKEN   GitHub token for API requests (avoids rate limiting)
+#
 set -euo pipefail
 
 # define constants
@@ -21,6 +24,9 @@ readonly BASE_DIR
 readonly DOCKERHUB_START_LINE
 readonly JSON
 readonly README_START_LINE
+
+# define defaults for environment variables
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 
 # define flags
 FLAG_COMMIT=0
@@ -69,6 +75,20 @@ print_bold_color() {
 print_error() {
   print_bold_color 1 "error: $1" 2
   echo '' >&2
+}
+
+version_exists() {
+  local repo="$1"
+  local version="$2"
+  local -a curl_args=(-sf)
+
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    curl_args+=(-H "Authorization: token ${GITHUB_TOKEN}")
+  fi
+
+  # shellcheck disable=SC2086
+  curl "${curl_args[@]}" "https://api.github.com/repos/ImageMagick/${repo}/tags?per_page=100" 2> /dev/null \
+    | jq -e "any(.name == \"${version}\")" > /dev/null
 }
 
 summary() {
@@ -164,6 +184,11 @@ if [ -z "${name}" ]; then
   done
 fi
 
+if ! command -v curl > /dev/null 2>&1; then
+  print_error 'curl is required'
+  exit 1
+fi
+
 if [ -n "${name}" ]; then
   old_version="$(jq -r ".${name}.[-1].version" <<< "${JSON}")"
 
@@ -176,6 +201,17 @@ if [ -n "${name}" ]; then
       fi
     done
     echo '---'
+  fi
+
+  if [ "${name}" == 'latest' ]; then
+    upstream_repo='ImageMagick'
+  else
+    upstream_repo='ImageMagick6'
+  fi
+
+  if ! version_exists "${upstream_repo}" "${new_version}"; then
+    print_error "couldn't verify version ${new_version} in the ${upstream_repo} tags API"
+    exit 1
   fi
 
   summary "${name}" "${old_version}" "${new_version}"
