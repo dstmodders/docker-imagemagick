@@ -1,14 +1,7 @@
 {
   "latest": [
-    {
-      "version": "7.1.2-29",
-      "latest": true
-    }
+    { "version": "7.1.2-14" },
+    { "version": "7.1.2-29", "latest": true }
   ],
-  "legacy": [
-    {
-      "version": "6.9.13-54",
-      "latest": true
-    }
-  ]
+  "legacy": [{ "version": "6.9.13-54", "latest": true }]
 }
