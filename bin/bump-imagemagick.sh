@@ -6,11 +6,12 @@
 #   bump-imagemagick.sh [flags] [latest|legacy] [version]
 #
 # Flags:
-#   -c, --commit   commit changes
-#   -h, --help     help for bump-imagemagick.sh
+#   -c, --commit    commit changes
+#   -d, --dry-run   only check and don't apply or commit any changes
+#   -h, --help      help for bump-imagemagick.sh
 #
 # Environment Variables:
-#   GITHUB_TOKEN   GitHub token for API requests (avoids rate limiting)
+#   GITHUB_TOKEN    GitHub token for API requests (avoids rate limiting)
 #
 set -euo pipefail
 
@@ -30,6 +31,7 @@ GITHUB_TOKEN="${GITHUB_TOKEN:-}"
 
 # define flags
 FLAG_COMMIT=0
+FLAG_DRY_RUN=0
 
 usage() {
   awk '
@@ -148,6 +150,9 @@ while [ $# -gt 0 ]; do
     -c | --commit)
       FLAG_COMMIT=1
       ;;
+    -d | --dry-run)
+      FLAG_DRY_RUN=1
+      ;;
     -h | --help)
       usage
       exit 0
@@ -165,6 +170,7 @@ while [ $# -gt 0 ]; do
 done
 
 readonly FLAG_COMMIT
+readonly FLAG_DRY_RUN
 
 if [ -z "${name}" ]; then
   echo 'Choose bump option:'
@@ -216,6 +222,11 @@ if [ -n "${name}" ]; then
 
   summary "${name}" "${old_version}" "${new_version}"
   echo '---'
+
+  if [ "${FLAG_DRY_RUN}" -eq 1 ]; then
+    exit 0
+  fi
+
   replace "${name}" "${old_version}" "${new_version}"
 
   if [ "${FLAG_COMMIT}" -eq 1 ]; then
