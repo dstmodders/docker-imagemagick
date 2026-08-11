@@ -1,0 +1,98 @@
+name: Check for updates
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+
+env:
+  SLACK_CHANNEL: ${{ secrets.SLACK_CHANNEL }}
+  SLACK_SIGNING_SECRET: ${{ secrets.SLACK_SIGNING_SECRET }}
+  SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+
+jobs:
+  check-imagemagick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Output versions from the tags API
+        id: versions
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          latest6="$(curl -sf -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            'https://api.github.com/repos/ImageMagick/ImageMagick6/tags?per_page=100' |
+            jq -r '.[].name' |
+            grep -E '^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$' |
+            sort -V |
+            tail -1)"
+
+          latest7="$(curl -sf -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            'https://api.github.com/repos/ImageMagick/ImageMagick/tags?per_page=100' |
+            jq -r '.[].name' |
+            grep -E '^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$' |
+            sort -V |
+            tail -1)"
+
+          {
+            echo "latest6=${latest6}"
+            echo "latest7=${latest7}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Restore last checked versions from cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: .check-for-updates.txt
+          key: check-for-updates-${{ steps.versions.outputs.latest7 }}-${{ steps.versions.outputs.latest6 }}
+      - name: Compare versions
+        id: compare
+        env:
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          current6="$(jq -r '.legacy[-1].version' ./versions.json)"
+          current7="$(jq -r '.latest[-1].version' ./versions.json)"
+          retrieved6="${{ steps.versions.outputs.latest6 }}"
+          retrieved7="${{ steps.versions.outputs.latest7 }}"
+          message6="\`${current6}\` (up to date)"
+          message7="\`${current7}\` (up to date)"
+          has_updates='false'
+
+          if [ "${CACHE_HIT}" != 'true' ]; then
+            newest6="$(printf '%s\n%s\n' "${current6}" "${retrieved6}" | sort -V | tail -1)"
+            if [ "${newest6}" != "${current6}" ]; then
+              has_updates='true'
+              message6="\`${current6}\` → \`${retrieved6}\` (outdated)"
+            fi
+
+            newest7="$(printf '%s\n%s\n' "${current7}" "${retrieved7}" | sort -V | tail -1)"
+            if [ "${newest7}" != "${current7}" ]; then
+              has_updates='true'
+              message7="\`${current7}\` → \`${retrieved7}\` (outdated)"
+            fi
+          fi
+
+          {
+            echo "message6=${message6}"
+            echo "message7=${message7}"
+            echo "has-updates=${has_updates}"
+          } >> "$GITHUB_OUTPUT"
+      - name: Refresh the cache file
+        run: |
+          printf '%s\n%s\n' \
+            "${{ steps.versions.outputs.latest6 }}" \
+            "${{ steps.versions.outputs.latest7 }}" \
+            > .check-for-updates.txt
+      - name: Send Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ steps.compare.outputs.has-updates == 'true' }}
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            ImageMagick 6: ${{ steps.compare.outputs.message6 }}
+            ImageMagick 7: ${{ steps.compare.outputs.message7 }}
+          status: success
