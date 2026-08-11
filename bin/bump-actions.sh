@@ -20,7 +20,7 @@ set -euo pipefail
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 BINFMT_IMAGE_NAME='tonistiigi/binfmt'
 WORKFLOW_DIR='.github/workflows'
-WORKFLOW_FILES=('build.yml' 'ci.yml' 'sync-dockerhub-description.yml')
+WORKFLOW_FILES=('build.yml' 'check-for-updates.yml' 'ci.yml' 'sync-dockerhub-description.yml')
 
 readonly BASE_DIR
 readonly BINFMT_IMAGE_NAME
