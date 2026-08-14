@@ -85,5 +85,5 @@ RUN groupadd --gid 1000 imagemagick \
   # smoke test
   && identify -version
 
-USER imagemagick
+USER 1000:1000
 WORKDIR /data/
