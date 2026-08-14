@@ -57,25 +57,25 @@ jobs:
         id: prettier
         run: echo "issues=$(pnpm exec prettier --list-different . | wc -l)" >> "$GITHUB_OUTPUT"
       - name: Lint using Hadolint (latest Alpine)
-        uses: hadolint/hadolint-action@v3.3.0
+        uses: hadolint/hadolint-action@v3.4.0
         id: hadolint-latest-alpine
         with:
           dockerfile: ./latest/alpine/Dockerfile
           no-fail: true
       - name: Lint using Hadolint (latest Debian)
-        uses: hadolint/hadolint-action@v3.3.0
+        uses: hadolint/hadolint-action@v3.4.0
         id: hadolint-latest-debian
         with:
           dockerfile: ./latest/debian/Dockerfile
           no-fail: true
       - name: Lint using Hadolint (legacy Alpine)
-        uses: hadolint/hadolint-action@v3.3.0
+        uses: hadolint/hadolint-action@v3.4.0
         id: hadolint-legacy-alpine
         with:
           dockerfile: ./legacy/alpine/Dockerfile
           no-fail: true
       - name: Lint using Hadolint (legacy Debian)
-        uses: hadolint/hadolint-action@v3.3.0
+        uses: hadolint/hadolint-action@v3.4.0
         id: hadolint-legacy-debian
         with:
           dockerfile: ./legacy/debian/Dockerfile
