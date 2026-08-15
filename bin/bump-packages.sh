@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
-# Bump package in Dockerfiles.
+# Bump packages in Dockerfiles and the binfmt Docker image in GHA build
+# workflow.
 #
 # Usage:
 #   bump-packages.sh [flags]
@@ -11,16 +12,23 @@
 #   -l, --list      only list packages and their current versions
 #   -h, --help      help for bump-packages.sh
 #
+# Environment Variables:
+#   GITHUB_TOKEN    GitHub token for API requests (avoids rate limiting)
+#
 set -euo pipefail
 
 # define constants
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
 DOCKER_ALPINE_IMAGE='alpine:3.24.1'
 DOCKER_DEBIAN_IMAGE='debian:trixie-slim'
+GHA_BINFMT_IMAGE_NAME='tonistiigi/binfmt'
+GHA_BUILD_WORKFLOW_PATH='.github/workflows/build.yml'
 
 readonly BASE_DIR
 readonly DOCKER_ALPINE_IMAGE
 readonly DOCKER_DEBIAN_IMAGE
+readonly GHA_BINFMT_IMAGE_NAME
+readonly GHA_BUILD_WORKFLOW_PATH
 
 # define flags
 FLAG_COMMIT=0
@@ -76,6 +84,22 @@ print_error() {
 print_title() {
   print_bold "[$1]"
   printf '\n\n'
+}
+
+get_latest_release() {
+  local owner="$1"
+  local repo="$2"
+  local -a curl_args=(-sf)
+
+  if [ -n "${GITHUB_TOKEN:-}" ]; then
+    curl_args+=(-H "Authorization: token ${GITHUB_TOKEN}")
+  fi
+
+  # shellcheck disable=SC2086
+  curl "${curl_args[@]}" "https://api.github.com/repos/${owner}/${repo}/releases/latest" 2> /dev/null \
+    | grep '"tag_name"' \
+    | head -1 \
+    | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/' || echo ''
 }
 
 get_packages_from_dockerfile() {
@@ -202,6 +226,62 @@ commit_changes() {
   fi
 }
 
+update_binfmt_image() {
+  local latest_tag
+  local latest_version
+  local current_version
+  local current_full
+  local latest_full
+
+  current_full="$(grep -oE "${GHA_BINFMT_IMAGE_NAME}:[^'\"]+" "${GHA_BUILD_WORKFLOW_PATH}" | head -1)"
+  current_version="${current_full#"${GHA_BINFMT_IMAGE_NAME}":}"
+
+  if [ "${FLAG_LIST}" -eq 1 ]; then
+    printf '%s %s\n' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}"
+    return 0
+  fi
+
+  latest_tag="$(get_latest_release 'tonistiigi' 'binfmt')"
+
+  if [ -z "${latest_tag}" ]; then
+    printf '%s %s ' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}"
+    print_bold_color 3 'unknown'
+    printf '\n'
+    return 0
+  fi
+
+  latest_tag="${latest_tag#deploy/}"
+
+  if [[ "${latest_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]] || [[ "${latest_tag}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
+    latest_version="qemu-${latest_tag}"
+  else
+    printf '%s %s ' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}"
+    print_bold_color 3 'unknown'
+    printf '\n'
+    return 0
+  fi
+
+  latest_full="${GHA_BINFMT_IMAGE_NAME}:${latest_version}"
+
+  if [ "${current_version}" != "${latest_version}" ]; then
+    printf '%s %s => %s ' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}" "${latest_version}"
+    print_bold_color 3 'outdated'
+  else
+    printf '%s %s ' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}"
+    print_bold_color 2 'up-to-date'
+  fi
+  printf '\n'
+
+  if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${current_version}" != "${latest_version}" ]; then
+    sed -i "s|${current_full}|${latest_full}|g" "${GHA_BUILD_WORKFLOW_PATH}"
+
+    if [ "${FLAG_COMMIT}" -eq 1 ]; then
+      echo '---'
+      commit_changes "${GHA_BUILD_WORKFLOW_PATH}" "Bump ${GHA_BINFMT_IMAGE_NAME} in build GA workflow" "Bump ${GHA_BINFMT_IMAGE_NAME} from ${current_version} to ${latest_version}"
+    fi
+  fi
+}
+
 update_alpine_dockerfile() {
   local commit_list=()
   local dockerfile="$1"
@@ -294,6 +374,21 @@ readonly FLAG_DRY_RUN
 readonly FLAG_LIST
 
 if [ "${FLAG_LIST}" -eq 0 ]; then
+  if ! which docker > /dev/null 2>&1; then
+    print_error 'Docker CLI is not installed'
+    exit 1
+  fi
+
+  if ! docker info > /dev/null 2>&1; then
+    print_error 'Docker daemon is not running'
+    exit 1
+  fi
+
+  if ! command -v curl > /dev/null 2>&1; then
+    print_error 'curl is required'
+    exit 1
+  fi
+
   print_title 'DOCKER'
   echo 'Pulling Docker images...'
   echo '---'
@@ -302,6 +397,10 @@ if [ "${FLAG_LIST}" -eq 0 ]; then
   docker pull "${DOCKER_DEBIAN_IMAGE}"
   printf '\n'
 fi
+
+print_title 'GITHUB ACTIONS BINFMT IMAGE'
+update_binfmt_image
+printf '\n'
 
 print_title 'LATEST ALPINE PACKAGES'
 update_alpine_dockerfile './latest/alpine/Dockerfile' 'Bump packages in latest alpine image'
