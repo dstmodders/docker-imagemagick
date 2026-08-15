@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Bump packages in Dockerfiles and the binfmt Docker image in GHA build
-# workflow.
+# Bump base images and packages in Dockerfiles. Also, bump the binfmt Docker
+# image in GHA build workflow.
 #
 # Usage:
 #   bump-packages.sh [flags]
@@ -19,14 +19,10 @@ set -euo pipefail
 
 # define constants
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
-DOCKER_ALPINE_IMAGE='alpine:3.24.1'
-DOCKER_DEBIAN_IMAGE='debian:trixie-slim'
 GHA_BINFMT_IMAGE_NAME='tonistiigi/binfmt'
 GHA_BUILD_WORKFLOW_PATH='.github/workflows/build.yml'
 
 readonly BASE_DIR
-readonly DOCKER_ALPINE_IMAGE
-readonly DOCKER_DEBIAN_IMAGE
 readonly GHA_BINFMT_IMAGE_NAME
 readonly GHA_BUILD_WORKFLOW_PATH
 
@@ -86,6 +82,11 @@ print_title() {
   printf '\n\n'
 }
 
+get_base_image() {
+  local dockerfile="$1"
+  grep '^FROM' "${dockerfile}" | head -1 | awk '{print $2}'
+}
+
 get_latest_release() {
   local owner="$1"
   local repo="$2"
@@ -100,6 +101,25 @@ get_latest_release() {
     | grep '"tag_name"' \
     | head -1 \
     | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/' || echo ''
+}
+
+get_latest_alpine_release() {
+  docker run --rm alpine:latest cat /etc/alpine-release 2> /dev/null \
+    | tr -d '[:space:]' \
+    || echo ''
+}
+
+get_latest_debian_release() {
+  local codename
+  codename="$(docker run --rm debian:latest cat /etc/os-release 2> /dev/null \
+    | grep '^VERSION_CODENAME=' \
+    | cut -d '=' -f 2 \
+    | tr -d '[:space:]' \
+    || echo '')"
+
+  if [ -n "${codename}" ]; then
+    echo "${codename}-slim"
+  fi
 }
 
 get_packages_from_dockerfile() {
@@ -117,14 +137,19 @@ get_packages_from_dockerfile() {
 }
 
 get_latest_apk_package_version() {
+  local base_image
+
   local name="$1"
+  local dockerfile="$2"
+
+  base_image="$(get_base_image "${dockerfile}")"
 
   local escaped_name
   # shellcheck disable=SC2001
   escaped_name="$(echo "${name}" | sed "s/[.[\*^$(){}+?|]/\\\\&/g")"
 
   local version
-  version="$(docker run --rm -u root "${DOCKER_ALPINE_IMAGE}" /bin/sh -c "
+  version="$(docker run --rm -u root "${base_image}" /bin/sh -c "
     apk update &>/dev/null \
     && apk info '${name}' \
     | grep '^${name}.*description' \
@@ -141,9 +166,13 @@ get_latest_apk_package_version() {
 
 get_latest_apt_package_version() {
   local package_name="$1"
+  local dockerfile="$2"
+
+  local base_image
+  base_image="$(get_base_image "${dockerfile}")"
 
   local version
-  version="$(docker run --rm -u root "${DOCKER_DEBIAN_IMAGE}" /bin/bash -c "
+  version="$(docker run --rm -u root "${base_image}" /bin/bash -c "
     apt-get update &>/dev/null \
     && apt-cache show '${package_name}' \
     | grep '^Version:' \
@@ -213,16 +242,17 @@ commit_changes() {
   local commit_message="$3"
 
   if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ]; then
+    echo '---'
     printf 'Committing...'
     git add "${dockerfile}"
 
     if [ -n "$(git diff --cached --name-only)" ]; then
       printf '\n'
-      echo '---'
       git commit -m "${commit_message_first_line}" -m "${commit_message}"
     else
       printf ' Skipped\n'
     fi
+    echo '---'
   fi
 }
 
@@ -276,8 +306,62 @@ update_binfmt_image() {
     sed -i "s|${current_full}|${latest_full}|g" "${GHA_BUILD_WORKFLOW_PATH}"
 
     if [ "${FLAG_COMMIT}" -eq 1 ]; then
-      echo '---'
       commit_changes "${GHA_BUILD_WORKFLOW_PATH}" "Bump ${GHA_BINFMT_IMAGE_NAME} in build GA workflow" "Bump ${GHA_BINFMT_IMAGE_NAME} from ${current_version} to ${latest_version}"
+    fi
+  fi
+}
+
+update_base_image() {
+  local current_full
+  local current_version
+  local image_name
+  local latest_version
+
+  local dockerfile="$1"
+  local label="$2"
+
+  current_full="$(grep '^FROM' "${dockerfile}" | head -1)"
+  image_name="$(echo "${current_full}" | awk '{print $2}' | cut -d ':' -f 1)"
+  current_version="$(echo "${current_full}" | awk '{print $2}' | cut -d ':' -f 2)"
+
+  if [ "${FLAG_LIST}" -eq 1 ]; then
+    printf '%s %s\n' "${label}" "${current_version}"
+    return 0
+  fi
+
+  case "${image_name}" in
+    alpine)
+      latest_version="$(get_latest_alpine_release)"
+      ;;
+    debian)
+      latest_version="$(get_latest_debian_release)"
+      ;;
+    *)
+      latest_version=''
+      ;;
+  esac
+
+  if [ -z "${latest_version}" ]; then
+    printf '%s %s ' "${label}" "${current_version}"
+    print_bold_color 3 'unknown'
+    printf '\n'
+    return 0
+  fi
+
+  if [ "${current_version}" != "${latest_version}" ]; then
+    printf '%s %s => %s ' "${label}" "${current_version}" "${latest_version}"
+    print_bold_color 3 'outdated'
+  else
+    printf '%s %s ' "${label}" "${current_version}"
+    print_bold_color 2 'up-to-date'
+  fi
+  printf '\n'
+
+  if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${current_version}" != "${latest_version}" ]; then
+    sed -i "s|FROM ${image_name}:${current_version}|FROM ${image_name}:${latest_version}|" "${dockerfile}"
+
+    if [ "${FLAG_COMMIT}" -eq 1 ]; then
+      commit_changes "${dockerfile}" "Bump ${label} image from ${current_version} to ${latest_version}" "Bump the base image of the ${label} Dockerfile from ${current_version} to ${latest_version}"
     fi
   fi
 }
@@ -292,7 +376,7 @@ update_alpine_dockerfile() {
     current_version="$(echo "${line}" | cut -d '=' -f 2)"
 
     if [ "${FLAG_LIST}" -eq 0 ]; then
-      latest_version="$(get_latest_apk_package_version "${package_name}")"
+      latest_version="$(get_latest_apk_package_version "${package_name}" "${dockerfile}")"
       update_package_in_dockerfile "${dockerfile}" "${package_name}" "${current_version}" "${latest_version}"
 
       if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ] && [ "${current_version}" != "${latest_version}" ]; then
@@ -306,7 +390,6 @@ update_alpine_dockerfile() {
   if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ] && [ "${#commit_list[@]}" -gt 0 ]; then
     mapfile -t sorted_commit_list < <(printf "%s\n" "${commit_list[@]}" | sort)
     commit_message="$(printf "%s\n" "${sorted_commit_list[@]}")"
-    echo '---'
     commit_changes "${dockerfile}" "${commit_message_first_line}" "${commit_message}"
   fi
 }
@@ -335,7 +418,6 @@ update_debian_dockerfile() {
   if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ] && [ "${#commit_list[@]}" -gt 0 ]; then
     mapfile -t sorted_commit_list < <(printf "%s\n" "${commit_list[@]}" | sort)
     commit_message="$(printf "%s\n" "${sorted_commit_list[@]}")"
-    echo '---'
     commit_changes "${dockerfile}" "${commit_message_first_line}" "${commit_message}"
   fi
 }
@@ -392,14 +474,25 @@ if [ "${FLAG_LIST}" -eq 0 ]; then
   print_title 'DOCKER'
   echo 'Pulling Docker images...'
   echo '---'
-  docker pull "${DOCKER_ALPINE_IMAGE}"
+  docker pull "$(get_base_image './latest/alpine/Dockerfile')"
   echo '---'
-  docker pull "${DOCKER_DEBIAN_IMAGE}"
+  docker pull "$(get_base_image './latest/debian/Dockerfile')"
+  echo '---'
+  docker pull alpine:latest
+  echo '---'
+  docker pull debian:latest
   printf '\n'
 fi
 
 print_title 'GITHUB ACTIONS BINFMT IMAGE'
 update_binfmt_image
+printf '\n'
+
+print_title 'BASE IMAGES'
+update_base_image './latest/alpine/Dockerfile' 'latest/alpine'
+update_base_image './latest/debian/Dockerfile' 'latest/debian'
+update_base_image './legacy/alpine/Dockerfile' 'legacy/alpine'
+update_base_image './legacy/debian/Dockerfile' 'legacy/debian'
 printf '\n'
 
 print_title 'LATEST ALPINE PACKAGES'
