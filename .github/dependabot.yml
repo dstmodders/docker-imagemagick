@@ -2,6 +2,8 @@ version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
+    labels:
+      - dependencies
     schedule:
       interval: weekly
     target-branch: develop
@@ -10,6 +12,8 @@ updates:
         patterns: ['*']
   - package-ecosystem: npm
     directory: /
+    labels:
+      - dependencies
     schedule:
       interval: weekly
     target-branch: develop
