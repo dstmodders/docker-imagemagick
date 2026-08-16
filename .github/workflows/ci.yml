@@ -24,6 +24,47 @@ env:
   SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          json="$(cat ./versions.json)"
+          matrix="$(jq -cM '
+            (
+              [ .latest[] | { version: .version, family: "latest" } ]
+              +
+              [ .legacy[] | { version: .version, family: "legacy" } ]
+            )
+          ' <<< "$json")"
+          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      docker: ${{ steps.filter.outputs.docker }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Check for docker-related changes
+        uses: dorny/paths-filter@v4
+        id: filter
+        with:
+          filters: |
+            docker:
+              - 'latest/**'
+              - 'legacy/**'
+              - '.github/workflows/ci.yml'
+              - versions.json
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -133,6 +174,59 @@ jobs:
             Hadolint issues: ${{ steps.hadolint.outputs.issues || 'Skipped' }}
             Prettier issues: ${{ steps.prettier.outputs.issues || 'Skipped' }}
             ShellCheck issues: ${{ steps.shellcheck.outputs.issues || 'Skipped' }}
+          status: ${{ job.status }}
+          timestamp: ${{ steps.slack.outputs.slack-timestamp }}
+
+  build:
+    needs: [changes, prepare]
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.docker == 'true' }}
+    strategy:
+      matrix:
+        image: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7
+      - name: Send Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' }}
+        id: slack
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            ImageMagick version: ${{ matrix.image.version }}
+          status: in-progress
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+      - name: Build a Debian image
+        uses: docker/build-push-action@v7
+        with:
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          context: .
+          file: ./${{ matrix.image.family }}/debian/Dockerfile
+          labels: maintainer=victor@popkov.me
+          platforms: linux/amd64
+          pull: true
+          push: false
+      - name: Build an Alpine image
+        uses: docker/build-push-action@v7
+        with:
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          context: .
+          file: ./${{ matrix.image.family }}/alpine/Dockerfile
+          labels: maintainer=victor@popkov.me
+          platforms: linux/amd64
+          pull: true
+          push: false
+      - name: Update Slack notification
+        uses: codedsolar/slack-action@v1
+        if: ${{ github.event_name != 'pull_request' && always() }}
+        with:
+          fields: |
+            {STATUS}
+            {REF}
+            ImageMagick version: ${{ matrix.image.version }}
           status: ${{ job.status }}
           timestamp: ${{ steps.slack.outputs.slack-timestamp }}
 
