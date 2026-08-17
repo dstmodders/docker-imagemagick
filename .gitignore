@@ -1,6 +1,7 @@
 /.check-for-updates.txt
 /.idea/
 /.vscode/
+/act-event.json
 /node_modules/
 /tests/perlmagick/demo.pam
 /tests/result/
