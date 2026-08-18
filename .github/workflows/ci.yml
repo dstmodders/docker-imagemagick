@@ -37,9 +37,9 @@ jobs:
           json="$(cat ./versions.json)"
           matrix="$(jq -cM '
             (
-              [ .latest[] | { version: .version, family: "latest" } ]
+              [ .latest[] | { version: .version, family: "latest", latest: (.latest // false) } ]
               +
-              [ .legacy[] | { version: .version, family: "legacy" } ]
+              [ .legacy[] | { version: .version, family: "legacy", latest: (.latest // false) } ]
             )
           ' <<< "$json")"
           echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
@@ -206,9 +206,12 @@ jobs:
           context: .
           file: ./${{ matrix.image.family }}/debian/Dockerfile
           labels: maintainer=victor@popkov.me
+          load: true
           platforms: linux/amd64
           pull: true
           push: false
+          tags: |
+            ${{ matrix.image.family }}-${{ matrix.image.version }}-debian
       - name: Build an Alpine image
         uses: docker/build-push-action@v7
         with:
@@ -216,9 +219,25 @@ jobs:
           context: .
           file: ./${{ matrix.image.family }}/alpine/Dockerfile
           labels: maintainer=victor@popkov.me
+          load: true
           platforms: linux/amd64
           pull: true
           push: false
+          tags: |
+            ${{ matrix.image.family }}-${{ matrix.image.version }}-alpine
+      - name: Tag Alpine image
+        if: ${{ matrix.image.latest }}
+        run: docker tag ${{ matrix.image.family }}-${{ matrix.image.version }}-alpine ${{ matrix.image.family }}
+      - name: Save Alpine image
+        if: ${{ matrix.image.latest }}
+        run: docker save -o ./ci-${{ matrix.image.family }}-alpine.tar ${{ matrix.image.family }}
+      - name: Upload Alpine image
+        if: ${{ matrix.image.latest }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: ci-${{ matrix.image.family }}-alpine-${{ github.run_id }}
+          path: ci-${{ matrix.image.family }}-alpine.tar
+          retention-days: 1
       - name: Update Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' && always() }}
@@ -231,11 +250,23 @@ jobs:
           timestamp: ${{ steps.slack.outputs.slack-timestamp }}
 
   test:
-    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
+    needs: [build]
     runs-on: ubuntu-latest
     steps:
       - name: Check out
         uses: actions/checkout@v7
+      - name: Download latest image
+        uses: actions/download-artifact@v7
+        with:
+          name: ci-latest-alpine-${{ github.run_id }}
+      - name: Download legacy image
+        uses: actions/download-artifact@v7
+        with:
+          name: ci-legacy-alpine-${{ github.run_id }}
+      - name: Load latest image
+        run: docker load -i ci-latest-alpine.tar
+      - name: Load legacy image
+        run: docker load -i ci-legacy-alpine.tar
       - name: Send Slack notification
         uses: codedsolar/slack-action@v1
         if: ${{ github.event_name != 'pull_request' }}
@@ -249,38 +280,36 @@ jobs:
       - name: Run tests
         run: |
           # ImageMagick 7
-          docker pull dstmodders/imagemagick:latest
           docker run --name test-latest \
             --user root \
             -v './tests:/tests:rw' \
             -w /tests/ \
-            dstmodders/imagemagick:latest \
+            latest \
             /bin/sh -c './tests.sh'
           mkdir -p ./tests-latest-results/
           docker cp test-latest:/tests/result/. ./tests-latest-results/
           docker rm test-latest
 
           # ImageMagick 6
-          docker pull dstmodders/imagemagick:legacy
           docker run --name test-legacy \
             --user root \
             -v './tests:/tests:rw' \
             -w /tests/ \
-            dstmodders/imagemagick:legacy \
+            legacy \
             /bin/sh -c './tests.sh'
           mkdir -p ./tests-legacy-results/
           docker cp test-legacy:/tests/result/. ./tests-legacy-results/
           docker rm test-legacy
       - name: Upload latest test results
         uses: actions/upload-artifact@v7
-        if: ${{ always() && !env.ACT }}
+        if: ${{ always() }}
         with:
           name: tests-latest-results-${{ github.run_id }}
           path: ./tests-latest-results
           retention-days: 7
       - name: Upload legacy test results
         uses: actions/upload-artifact@v7
-        if: ${{ always() && !env.ACT }}
+        if: ${{ always() }}
         with:
           name: tests-legacy-results-${{ github.run_id }}
           path: ./tests-legacy-results
