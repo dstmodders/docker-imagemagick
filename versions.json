@@ -1,7 +1,38 @@
 {
   "latest": [
-    { "version": "7.1.2-14" },
-    { "version": "7.1.2-29", "latest": true }
+    {
+      "version": "7.1.2-25"
+    },
+    {
+      "version": "7.1.2-26"
+    },
+    {
+      "version": "7.1.2-27"
+    },
+    {
+      "version": "7.1.2-28"
+    },
+    {
+      "version": "7.1.2-29",
+      "latest": true
+    }
   ],
-  "legacy": [{ "version": "6.9.13-54", "latest": true }]
+  "legacy": [
+    {
+      "version": "6.9.13-50"
+    },
+    {
+      "version": "6.9.13-51"
+    },
+    {
+      "version": "6.9.13-52"
+    },
+    {
+      "version": "6.9.13-53"
+    },
+    {
+      "version": "6.9.13-54",
+      "latest": true
+    }
+  ]
 }

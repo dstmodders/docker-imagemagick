@@ -6,6 +6,11 @@
 [![Build]](https://github.com/dstmodders/docker-imagemagick/actions/workflows/build.yml)
 
 > [!NOTE]
+> We officially maintain the last 5 versions for each [ImageMagick] variant
+> (`latest` and `legacy`). When a new version is added, the oldest one is
+> removed. The public registries retain the last 10 builds per variant.
+
+> [!NOTE]
 > Due to possible inconsistencies in the upstream
 > [ImageMagick6](https://github.com/ImageMagick/ImageMagick6) and
 > [ImageMagick](https://github.com/ImageMagick/ImageMagick) repositories, some
