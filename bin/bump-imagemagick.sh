@@ -129,7 +129,11 @@ replace() {
   printf 'Replacing...'
   sed -i "${DOCKERHUB_START_LINE},\$s/\`${old_version}\`/\`${new_version}\`/g" ./DOCKERHUB.md
   sed -i "${README_START_LINE},\$s/\`${old_version}\`/\`${new_version}\`/g" ./README.md
-  sed -i "s/\"${old_version}\"/\"${new_version}\"/" ./versions.json
+  jq --indent 2 '
+    .'"${dir}"' |= map(del(.latest))
+    | .'"${dir}"' += [{"version": "'"${new_version}"'", "latest": true}]
+    | .'"${dir}"' |= if length > 5 then .[-5:] else . end
+  ' ./versions.json > ./versions.json.tmp && mv ./versions.json.tmp ./versions.json
   sed -i "/^# reference:/s/${old_version}/${new_version}/g" ./bin/bump-supported-tags.sh
   sed -i "s/^ARG IMAGEMAGICK_VERSION=\"${old_version}\"$/ARG IMAGEMAGICK_VERSION=\"${new_version}\"/" "./${dir}/alpine/Dockerfile"
   sed -i "s/^ARG IMAGEMAGICK_VERSION=\"${old_version}\"$/ARG IMAGEMAGICK_VERSION=\"${new_version}\"/" "./${dir}/debian/Dockerfile"
