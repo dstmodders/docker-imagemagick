@@ -256,11 +256,11 @@ jobs:
       - name: Check out
         uses: actions/checkout@v7
       - name: Download latest image
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ci-latest-alpine-${{ github.run_id }}
       - name: Download legacy image
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: ci-legacy-alpine-${{ github.run_id }}
       - name: Load latest image
