@@ -22,7 +22,7 @@
 
 ## Supported tags and respective `Dockerfile` links
 
-- [`7.1.2-29-alpine`, `7.1.2-29`, `alpine`, `latest`](https://github.com/dstmodders/docker-imagemagick/blob/ecaeefaedf5e9e51f78de0ac665d8a43e0b28a81/latest/alpine/Dockerfile)
+- [`7.1.2-29-alpine`, `7.1.2-30`, `alpine`, `latest`](https://github.com/dstmodders/docker-imagemagick/blob/ecaeefaedf5e9e51f78de0ac665d8a43e0b28a81/latest/alpine/Dockerfile)
 - [`7.1.2-29-debian`, `debian`](https://github.com/dstmodders/docker-imagemagick/blob/ecaeefaedf5e9e51f78de0ac665d8a43e0b28a81/latest/debian/Dockerfile)
 - [`7.1.2-28-alpine`, `7.1.2-28`](https://github.com/dstmodders/docker-imagemagick/blob/ecaeefaedf5e9e51f78de0ac665d8a43e0b28a81/latest/alpine/Dockerfile)
 - [`7.1.2-28-debian`](https://github.com/dstmodders/docker-imagemagick/blob/ecaeefaedf5e9e51f78de0ac665d8a43e0b28a81/latest/debian/Dockerfile)
@@ -99,13 +99,13 @@ PS:\> docker run --rm -v "${PWD}:/data/" dstmodders/imagemagick magick input.gif
 
 | Name                  | Image                  | Value                       | Description           |
 | --------------------- | ---------------------- | --------------------------- | --------------------- |
-| `IMAGEMAGICK_VERSION` | `latest`<br />`legacy` | `7.1.2-29`<br />`6.9.13-55` | [ImageMagick] version |
+| `IMAGEMAGICK_VERSION` | `latest`<br />`legacy` | `7.1.2-30`<br />`6.9.13-55` | [ImageMagick] version |
 
 ## Supported build arguments
 
 | Name                  | Image                  | Default                     | Description                |
 | --------------------- | ---------------------- | --------------------------- | -------------------------- |
-| `IMAGEMAGICK_VERSION` | `latest`<br />`legacy` | `7.1.2-29`<br />`6.9.13-55` | Sets [ImageMagick] version |
+| `IMAGEMAGICK_VERSION` | `latest`<br />`legacy` | `7.1.2-30`<br />`6.9.13-55` | Sets [ImageMagick] version |
 
 ## Supported architectures
 
