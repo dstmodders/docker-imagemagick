@@ -5,10 +5,18 @@
 # Usage:
 #   bump-supported-tags.sh [flags]
 #
+# Examples:
+#   bump-supported-tags.sh
+#   bump-supported-tags.sh -d
+#
 # Flags:
-#   -c, --commit    commit changes
-#   -d, --dry-run   only check and don't apply or commit any changes
-#   -h, --help      help for bump-supported-tags.sh
+#   -c, --commit    Commit changes
+#   -d, --dry-run   Only check and don't apply or commit any changes
+#   -h, --help      Show this help message
+#
+# Environment Variables:
+#   NO_COLOR        Set to 1 to disable terminal colors
+#                   (see no-color.org, default "0")
 #
 set -euo pipefail
 
@@ -19,7 +27,7 @@ COMMIT_MESSAGE='Change tags in DOCKERHUB.md and README.md'
 DISTS=('alpine' 'debian')
 HEADING_FOR_OVERVIEW='## Overview'
 HEADING_FOR_TAGS="## Supported tags and respective \`Dockerfile\` links"
-JSON="$(cat ./versions.json)"
+JSON="$(cat "${BASE_DIR}/../versions.json")"
 LATEST_VERSIONS_KEYS=()
 LEGACY_VERSIONS_KEYS=()
 REPOSITORY='https://github.com/dstmodders/docker-imagemagick'
@@ -43,19 +51,22 @@ readonly LATEST_VERSIONS_KEYS
 readonly LEGACY_VERSIONS_KEYS
 readonly REPOSITORY
 
+# define defaults for environment variables
+NO_COLOR="${NO_COLOR:-0}"
+
 # define flags
 FLAG_COMMIT=0
 FLAG_DRY_RUN=0
 
 usage() {
   awk '
-    NR==1 && /^#!/ { next }         # skip shebang
-    /^#/ {                          # collect comment lines
+    NR==1 && /^#!/ { next }            # skip shebang
+    /^#/ {                             # collect comment lines
       sub(/^# ?/, "")
       buf = buf ? buf ORS $0 : $0
       next
     }
-    buf { exit }                    # stop after first non-comment
+    buf { exit }                       # stop after first non-comment
     END {
       if (buf) {
         sub(/[[:space:]]+$/, "", buf)  # trim trailing whitespace
@@ -65,23 +76,12 @@ usage() {
   ' "$0"
 }
 
-print_bold() {
-  local value="$1"
-  local output="${2:-1}"
-
-  if [ "${DISABLE_COLORS:-0}" = '1' ] || ! [ -t 1 ]; then
-    printf '%s' "${value}" >&"${output}"
-  else
-    printf "$(tput bold)%s$(tput sgr0)" "${value}" >&"${output}"
-  fi
-}
-
 print_bold_color() {
   local color="$1"
   local value="$2"
   local output="${3:-1}"
 
-  if [ "${DISABLE_COLORS:-0}" = '1' ] || ! [ -t 1 ]; then
+  if [ "${NO_COLOR}" = '1' ] || ! [ -t "${output}" ]; then
     printf '%s' "${value}" >&"${output}"
   else
     printf "$(tput bold)$(tput setaf "${color}")%s$(tput sgr0)" "${value}" >&"${output}"
@@ -89,8 +89,74 @@ print_bold_color() {
 }
 
 print_error() {
-  print_bold_color 1 "error: $1" 2
-  echo '' >&2
+  local message="$1"
+  print_bold_color 1 "error: ${message}" 2
+  printf '\n' >&2
+}
+
+die() {
+  local message="$1"
+  print_error "${message}"
+  exit 1
+}
+
+print_separator() {
+  print_bold_color 0 '---'
+  printf '\n'
+}
+
+bump_completed() {
+  print_separator
+  print_bold_color 2 'Bump completed'
+  printf '\n'
+  exit 0
+}
+
+dry_run_completed() {
+  print_separator
+  print_bold_color 3 'Dry-run completed'
+  printf '\n'
+  exit 0
+}
+
+# shellcheck disable=SC2329
+interrupt() {
+  printf '\n'
+  print_separator
+  print_bold_color 1 'Interrupted'
+  printf '\n'
+  exit 130
+}
+
+print_step() {
+  local message="$1"
+  local value="${2:-}"
+
+  printf -- '--> %s' "${message}"
+  if [ -n "${value}" ]; then
+    printf ': '
+    print_bold_color 7 "${value}"
+  fi
+}
+
+print_step_dotted() {
+  local message="$1"
+  local value="${2:-}"
+
+  print_step "${message}" "${value}"
+  printf '... '
+}
+
+print_step_success() {
+  local value="${1:-Success}"
+  print_bold_color 2 "${value}"
+  printf '\n'
+}
+
+print_step_skipped() {
+  local value="${1:-Skipped}"
+  print_bold_color 3 "${value}"
+  printf '\n'
 }
 
 print_url() {
@@ -98,7 +164,7 @@ print_url() {
   local commit="$2"
   local directory="$3"
   local url="[${tags}](${REPOSITORY}/blob/${commit}/${directory}/Dockerfile)"
-  echo "- ${url}"
+  printf '- %s\n' "${url}"
 }
 
 # reference: 7.1.2-30-alpine, 7.1.2-30, alpine, latest
@@ -113,14 +179,14 @@ print_latest_tags() {
       tag_version="${version}"
 
       tags=''
-      if [ "${dist}" == 'alpine' ]; then
+      if [ "${dist}" = 'alpine' ]; then
         tags="\`${tag_full}\`, \`${tag_version}\`"
-        if [ "${latest}" == 'true' ]; then
+        if [ "${latest}" = 'true' ]; then
           tags="${tags}, \`${tag_dist}\`, \`latest\`"
         fi
       else
         tags="\`${tag_full}\`"
-        if [ "${latest}" == 'true' ]; then
+        if [ "${latest}" = 'true' ]; then
           tags="${tags}, \`${tag_dist}\`"
         fi
       fi
@@ -142,14 +208,14 @@ print_legacy_tags() {
       tag_version="legacy-${version}"
 
       tags=''
-      if [ "${dist}" == 'alpine' ]; then
+      if [ "${dist}" = 'alpine' ]; then
         tags="\`${tag_full}\`, \`${tag_version}\`"
-        if [ "${latest}" == 'true' ]; then
+        if [ "${latest}" = 'true' ]; then
           tags="${tags}, \`${tag_dist}\`, \`legacy-latest\`, \`legacy\`"
         fi
       else
         tags="\`${tag_full}\`"
-        if [ "${latest}" == 'true' ]; then
+        if [ "${latest}" = 'true' ]; then
           tags="${tags}, \`${tag_dist}\`"
         fi
       fi
@@ -189,11 +255,10 @@ while [ $# -gt 0 ]; do
       exit 0
       ;;
     -*)
-      print_error 'unrecognized flag'
-      usage
-      exit 1
+      die 'unrecognized flag'
       ;;
     *)
+      die 'unexpected argument'
       ;;
   esac
   shift 1
@@ -202,32 +267,40 @@ done
 readonly FLAG_COMMIT
 readonly FLAG_DRY_RUN
 
+trap interrupt SIGINT
+
+print_step_dotted 'Generating tags'
+printf '\n'
+print_separator
+
 printf "%s\n\n" "${HEADING_FOR_TAGS}"
 
 if [ "${FLAG_DRY_RUN}" -eq 1 ]; then
   print_latest_tags
   print_legacy_tags
-  exit 0
-else
-  latest_tags="$(print_latest_tags)"
-  legacy_tags="$(print_legacy_tags)"
-  echo "${latest_tags}"
-  echo "${legacy_tags}"
+  dry_run_completed
+fi
 
-  echo '---'
-  printf 'Replacing...'
-  replace "${HEADING_FOR_TAGS}"$'\n'$'\n'"${latest_tags}"$'\n'"${legacy_tags}"$'\n'
-  printf ' Done\n'
+latest_tags="$(print_latest_tags)"
+legacy_tags="$(print_legacy_tags)"
+printf '%s\n' "${latest_tags}"
+printf '%s\n' "${legacy_tags}"
 
-  if [ "${FLAG_COMMIT}" -eq 1 ]; then
-    printf 'Committing...'
-    git add ./DOCKERHUB.md ./README.md
-    if [ -n "$(git diff --cached --name-only)" ]; then
-      printf '\n'
-      echo '---'
-      git commit -m "${COMMIT_MESSAGE}"
-    else
-      printf ' Skipped\n'
-    fi
+print_separator
+print_step_dotted 'Replacing'
+replace "${HEADING_FOR_TAGS}"$'\n'$'\n'"${latest_tags}"$'\n'"${legacy_tags}"$'\n'
+print_step_success
+
+if [ "${FLAG_COMMIT}" -eq 1 ]; then
+  print_step_dotted 'Committing'
+  git add ./DOCKERHUB.md ./README.md
+  if [ -n "$(git diff --cached --name-only)" ]; then
+    printf '\n'
+    print_separator
+    git commit -m "${COMMIT_MESSAGE}"
+  else
+    print_step_skipped
   fi
 fi
+
+bump_completed
