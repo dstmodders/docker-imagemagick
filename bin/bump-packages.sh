@@ -6,14 +6,22 @@
 # Usage:
 #   bump-packages.sh [flags]
 #
+# Examples:
+#   bump-packages.sh
+#   bump-packages.sh -l
+#
 # Flags:
-#   -c, --commit    commit changes
-#   -d, --dry-run   only check and don't apply or commit any changes
-#   -l, --list      only list packages and their current versions
-#   -h, --help      help for bump-packages.sh
+#   -c, --commit    Commit changes
+#   -d, --dry-run   Only check and don't apply or commit any changes
+#   -l, --list      Only list packages and their current versions
+#   -h, --help      Show this help message
 #
 # Environment Variables:
-#   GITHUB_TOKEN    GitHub token for API requests (avoids rate limiting)
+#   GITHUB_TOKEN    GitHub token for API requests to avoid rate limiting
+#                   (default "")
+#
+#   NO_COLOR        Set to 1 to disable terminal colors
+#                   (see no-color.org, default "0")
 #
 set -euo pipefail
 
@@ -26,6 +34,10 @@ readonly BASE_DIR
 readonly GHA_BINFMT_IMAGE_NAME
 readonly GHA_BUILD_WORKFLOW_PATH
 
+# define defaults for environment variables
+GITHUB_TOKEN="${GITHUB_TOKEN:-}"
+NO_COLOR="${NO_COLOR:-0}"
+
 # define flags
 FLAG_COMMIT=0
 FLAG_DRY_RUN=0
@@ -33,13 +45,13 @@ FLAG_LIST=0
 
 usage() {
   awk '
-    NR==1 && /^#!/ { next }         # skip shebang
-    /^#/ {                          # collect comment lines
+    NR==1 && /^#!/ { next }            # skip shebang
+    /^#/ {                             # collect comment lines
       sub(/^# ?/, "")
       buf = buf ? buf ORS $0 : $0
       next
     }
-    buf { exit }                    # stop after first non-comment
+    buf { exit }                       # stop after first non-comment
     END {
       if (buf) {
         sub(/[[:space:]]+$/, "", buf)  # trim trailing whitespace
@@ -49,23 +61,12 @@ usage() {
   ' "$0"
 }
 
-print_bold() {
-  local value="$1"
-  local output="${2:-1}"
-
-  if [ "${DISABLE_COLORS:-0}" = '1' ] || ! [ -t 1 ]; then
-    printf '%s' "${value}" >&"${output}"
-  else
-    printf "$(tput bold)%s$(tput sgr0)" "${value}" >&"${output}"
-  fi
-}
-
 print_bold_color() {
   local color="$1"
   local value="$2"
   local output="${3:-1}"
 
-  if [ "${DISABLE_COLORS:-0}" = '1' ] || ! [ -t 1 ]; then
+  if [ "${NO_COLOR}" = '1' ] || ! [ -t "${output}" ]; then
     printf '%s' "${value}" >&"${output}"
   else
     printf "$(tput bold)$(tput setaf "${color}")%s$(tput sgr0)" "${value}" >&"${output}"
@@ -73,13 +74,75 @@ print_bold_color() {
 }
 
 print_error() {
-  print_bold_color 1 "error: $1" 2
-  echo '' >&2
+  local message="$1"
+  print_bold_color 1 "error: ${message}" 2
+  printf '\n' >&2
 }
 
-print_title() {
-  print_bold "[$1]"
-  printf '\n\n'
+die() {
+  local message="$1"
+  print_error "${message}"
+  exit 1
+}
+
+print_separator() {
+  print_bold_color 0 '---'
+  printf '\n'
+}
+
+bump_completed() {
+  print_separator
+  print_bold_color 2 'Bump completed'
+  printf '\n'
+  exit 0
+}
+
+dry_run_completed() {
+  print_separator
+  print_bold_color 3 'Dry-run completed'
+  printf '\n'
+  exit 0
+}
+
+list_completed() {
+  print_separator
+  print_bold_color 3 'List completed'
+  printf '\n'
+  exit 0
+}
+
+# shellcheck disable=SC2329
+interrupt() {
+  printf '\n'
+  print_separator
+  print_bold_color 1 'Interrupted'
+  printf '\n'
+  exit 130
+}
+
+print_step() {
+  local message="$1"
+  local value="${2:-}"
+
+  printf -- '--> %s' "${message}"
+  if [ -n "${value}" ]; then
+    printf ': '
+    print_bold_color 7 "${value}"
+  fi
+}
+
+print_step_dotted() {
+  local message="$1"
+  local value="${2:-}"
+
+  print_step "${message}" "${value}"
+  printf '... '
+}
+
+print_step_skipped() {
+  local value="${1:-Skipped}"
+  print_bold_color 3 "${value}"
+  printf '\n'
 }
 
 get_base_image() {
@@ -216,15 +279,20 @@ update_package_in_dockerfile() {
   local latest_version="$4"
 
   if [ -z "${latest_version}" ]; then
-    print_error "couldn't find the latest version for ${package_name}"
-    exit 1
+    die "couldn't find the latest version for ${package_name}"
   fi
 
   if [ "${current_version}" != "${latest_version}" ]; then
-    printf '%s %s => %s ' "${package_name}" "${current_version}" "${latest_version}"
+    printf '%s ' "${package_name}"
+    print_bold_color 7 "${current_version}"
+    printf ' → '
+    print_bold_color 4 "${latest_version}"
+    printf ' '
     print_bold_color 3 'outdated'
   else
-    printf '%s %s ' "${package_name}" "${current_version}"
+    printf '%s ' "${package_name}"
+    print_bold_color 7 "${current_version}"
+    printf ' '
     print_bold_color 2 'up-to-date'
   fi
   printf '\n'
@@ -237,76 +305,88 @@ update_package_in_dockerfile() {
 }
 
 commit_changes() {
-  local dockerfile="$1"
+  local file="$1"
   local commit_message_first_line="$2"
-  local commit_message="$3"
+  local commit_message="${3:-}"
 
   if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ]; then
-    echo '---'
-    printf 'Committing...'
-    git add "${dockerfile}"
-
+    print_separator
+    print_step_dotted 'Committing'
+    git add "${file}"
     if [ -n "$(git diff --cached --name-only)" ]; then
       printf '\n'
-      git commit -m "${commit_message_first_line}" -m "${commit_message}"
+      print_separator
+      if [ -n "${commit_message}" ]; then
+        git commit -m "${commit_message_first_line}" -m "${commit_message}"
+      else
+        git commit -m "${commit_message_first_line}"
+      fi
     else
-      printf ' Skipped\n'
+      print_step_skipped
     fi
-    echo '---'
+    print_separator
   fi
 }
 
 update_binfmt_image() {
+  local current_full
+  local current_version
+  local latest_full
   local latest_tag
   local latest_version
-  local current_version
-  local current_full
-  local latest_full
 
   current_full="$(grep -oE "${GHA_BINFMT_IMAGE_NAME}:[^'\"]+" "${GHA_BUILD_WORKFLOW_PATH}" | head -1)"
   current_version="${current_full#"${GHA_BINFMT_IMAGE_NAME}":}"
 
   if [ "${FLAG_LIST}" -eq 1 ]; then
-    printf '%s %s\n' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}"
+    printf '%s ' "${GHA_BINFMT_IMAGE_NAME}"
+    print_bold_color 7 "${current_version}"
+    printf '\n'
     return 0
   fi
 
   latest_tag="$(get_latest_release 'tonistiigi' 'binfmt')"
-
   if [ -z "${latest_tag}" ]; then
-    printf '%s %s ' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}"
+    printf '%s ' "${GHA_BINFMT_IMAGE_NAME}"
+    print_bold_color 7 "${current_version}"
+    printf ' '
     print_bold_color 3 'unknown'
     printf '\n'
     return 0
   fi
 
   latest_tag="${latest_tag#deploy/}"
-
   if [[ "${latest_tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]] || [[ "${latest_tag}" =~ ^[0-9]+\.[0-9]+\.[0-9]+-[0-9]+$ ]]; then
     latest_version="qemu-${latest_tag}"
   else
-    printf '%s %s ' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}"
+    printf '%s ' "${GHA_BINFMT_IMAGE_NAME}"
+    print_bold_color 7 "${current_version}"
+    printf ' '
     print_bold_color 3 'unknown'
     printf '\n'
     return 0
   fi
 
-  latest_full="${GHA_BINFMT_IMAGE_NAME}:${latest_version}"
-
   if [ "${current_version}" != "${latest_version}" ]; then
-    printf '%s %s => %s ' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}" "${latest_version}"
+    printf '%s ' "${GHA_BINFMT_IMAGE_NAME}"
+    print_bold_color 7 "${current_version}"
+    printf ' → '
+    print_bold_color 4 "${latest_version}"
+    printf ' '
     print_bold_color 3 'outdated'
   else
-    printf '%s %s ' "${GHA_BINFMT_IMAGE_NAME}" "${current_version}"
+    printf '%s ' "${GHA_BINFMT_IMAGE_NAME}"
+    print_bold_color 7 "${current_version}"
+    printf ' '
     print_bold_color 2 'up-to-date'
   fi
   printf '\n'
 
+  latest_full="${GHA_BINFMT_IMAGE_NAME}:${latest_version}"
   if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${current_version}" != "${latest_version}" ]; then
     sed -i "s|${current_full}|${latest_full}|g" "${GHA_BUILD_WORKFLOW_PATH}"
-
     if [ "${FLAG_COMMIT}" -eq 1 ]; then
-      commit_changes "${GHA_BUILD_WORKFLOW_PATH}" "Bump ${GHA_BINFMT_IMAGE_NAME} in build GA workflow" "Bump ${GHA_BINFMT_IMAGE_NAME} from ${current_version} to ${latest_version}"
+      commit_changes "${GHA_BUILD_WORKFLOW_PATH}" "Bump ${GHA_BINFMT_IMAGE_NAME} from ${current_version} to ${latest_version} in build GHA workflow"
     fi
   fi
 }
@@ -325,7 +405,9 @@ update_base_image() {
   current_version="$(echo "${current_full}" | awk '{print $2}' | cut -d ':' -f 2)"
 
   if [ "${FLAG_LIST}" -eq 1 ]; then
-    printf '%s %s\n' "${label}" "${current_version}"
+    printf '%s ' "${label}"
+    print_bold_color 7 "${current_version}"
+    printf '\n'
     return 0
   fi
 
@@ -342,26 +424,33 @@ update_base_image() {
   esac
 
   if [ -z "${latest_version}" ]; then
-    printf '%s %s ' "${label}" "${current_version}"
+    printf '%s ' "${label}"
+    print_bold_color 7 "${current_version}"
+    printf ' '
     print_bold_color 3 'unknown'
     printf '\n'
     return 0
   fi
 
   if [ "${current_version}" != "${latest_version}" ]; then
-    printf '%s %s => %s ' "${label}" "${current_version}" "${latest_version}"
+    printf '%s ' "${label}"
+    print_bold_color 7 "${current_version}"
+    printf ' → '
+    print_bold_color 4 "${latest_version}"
+    printf ' '
     print_bold_color 3 'outdated'
   else
-    printf '%s %s ' "${label}" "${current_version}"
+    printf '%s ' "${label}"
+    print_bold_color 7 "${current_version}"
+    printf ' '
     print_bold_color 2 'up-to-date'
   fi
   printf '\n'
 
   if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${current_version}" != "${latest_version}" ]; then
     sed -i "s|FROM ${image_name}:${current_version}|FROM ${image_name}:${latest_version}|" "${dockerfile}"
-
     if [ "${FLAG_COMMIT}" -eq 1 ]; then
-      commit_changes "${dockerfile}" "Bump ${label} image from ${current_version} to ${latest_version}" "Bump the base image of the ${label} Dockerfile from ${current_version} to ${latest_version}"
+      commit_changes "${dockerfile}" "Bump ${label} image from ${current_version} to ${latest_version}"
     fi
   fi
 }
@@ -383,7 +472,9 @@ update_alpine_dockerfile() {
         commit_list+=("- Bump ${package_name} from ${current_version} to ${latest_version}")
       fi
     else
-      printf '%s %s\n' "${package_name}" "${current_version}"
+      printf '%s ' "${package_name}"
+      print_bold_color 7 "${current_version}"
+      printf '\n'
     fi
   done <<< "$(get_packages_from_dockerfile "${dockerfile}")"
 
@@ -404,14 +495,16 @@ update_debian_dockerfile() {
     current_version="$(echo "${line}" | cut -d '=' -f 2)"
 
     if [ "${FLAG_LIST}" -eq 0 ]; then
-      latest_version="$(get_latest_apt_package_version "${package_name}")"
+      latest_version="$(get_latest_apt_package_version "${package_name}" "${dockerfile}")"
       update_package_in_dockerfile "${dockerfile}" "${package_name}" "${current_version}" "${latest_version}"
 
       if [ "${FLAG_DRY_RUN}" -eq 0 ] && [ "${FLAG_COMMIT}" -eq 1 ] && [ "${current_version}" != "${latest_version}" ]; then
         commit_list+=("- Bump ${package_name} from ${current_version} to ${latest_version}")
       fi
     else
-      printf '%s %s\n' "${package_name}" "${current_version}"
+      printf '%s ' "${package_name}"
+      print_bold_color 7 "${current_version}"
+      printf '\n'
     fi
   done <<< "$(get_packages_from_dockerfile "${dockerfile}")"
 
@@ -441,11 +534,10 @@ while [ $# -gt 0 ]; do
       FLAG_LIST=1
       ;;
     -*)
-      print_error 'unrecognized flag'
-      usage
-      exit 1
+      die 'unrecognized flag'
       ;;
     *)
+      die 'unexpected argument'
       ;;
   esac
   shift 1
@@ -455,57 +547,78 @@ readonly FLAG_COMMIT
 readonly FLAG_DRY_RUN
 readonly FLAG_LIST
 
+trap interrupt SIGINT
+
 if [ "${FLAG_LIST}" -eq 0 ]; then
-  if ! which docker > /dev/null 2>&1; then
-    print_error 'Docker CLI is not installed'
-    exit 1
+  if ! command -v docker > /dev/null 2>&1; then
+    die 'Docker CLI is not installed'
   fi
 
   if ! docker info > /dev/null 2>&1; then
-    print_error 'Docker daemon is not running'
-    exit 1
+    die 'Docker daemon is not running'
   fi
 
   if ! command -v curl > /dev/null 2>&1; then
-    print_error 'curl is required'
-    exit 1
+    die 'curl is required'
   fi
 
-  print_title 'DOCKER'
-  echo 'Pulling Docker images...'
-  echo '---'
-  docker pull "$(get_base_image './latest/alpine/Dockerfile')"
-  echo '---'
-  docker pull "$(get_base_image './latest/debian/Dockerfile')"
-  echo '---'
-  docker pull alpine:latest
-  echo '---'
-  docker pull debian:latest
+  print_step_dotted 'Pulling Docker images'
   printf '\n'
+  print_separator
+  docker pull "$(get_base_image './latest/alpine/Dockerfile')"
+  print_separator
+  docker pull "$(get_base_image './latest/debian/Dockerfile')"
+  print_separator
+  docker pull alpine:latest
+  print_separator
+  docker pull debian:latest
+  print_separator
 fi
 
-print_title 'GITHUB ACTIONS BINFMT IMAGE'
-update_binfmt_image
+print_step_dotted 'Checking GitHub Actions binfmt image'
 printf '\n'
+print_separator
+update_binfmt_image
+print_separator
 
-print_title 'BASE IMAGES'
+print_step_dotted 'Checking base images'
+printf '\n'
+print_separator
 update_base_image './latest/alpine/Dockerfile' 'latest/alpine'
 update_base_image './latest/debian/Dockerfile' 'latest/debian'
 update_base_image './legacy/alpine/Dockerfile' 'legacy/alpine'
 update_base_image './legacy/debian/Dockerfile' 'legacy/debian'
-printf '\n'
+print_separator
 
-print_title 'LATEST ALPINE PACKAGES'
+print_step_dotted 'Checking latest Alpine packages'
+printf '\n'
+print_separator
 update_alpine_dockerfile './latest/alpine/Dockerfile' 'Bump packages in latest alpine image'
-printf '\n'
+print_separator
 
-print_title 'LATEST DEBIAN PACKAGES'
+print_step_dotted 'Checking latest Debian packages'
+printf '\n'
+print_separator
 update_debian_dockerfile './latest/debian/Dockerfile' 'Bump packages in latest debian image'
-printf '\n'
+print_separator
 
-print_title 'LEGACY ALPINE PACKAGES'
+print_step_dotted 'Checking legacy Alpine packages'
+printf '\n'
+print_separator
 update_alpine_dockerfile './legacy/alpine/Dockerfile' 'Bump packages in legacy alpine image'
-printf '\n'
+print_separator
 
-print_title 'LEGACY DEBIAN PACKAGES'
+print_step_dotted 'Checking legacy Debian packages'
+printf '\n'
+print_separator
 update_debian_dockerfile './legacy/debian/Dockerfile' 'Bump packages in legacy debian image'
+
+if [ "${FLAG_LIST}" -eq 1 ]; then
+  list_completed
+fi
+
+if [ "${FLAG_DRY_RUN}" -eq 1 ]; then
+  dry_run_completed
+else
+  bump_completed
+fi
