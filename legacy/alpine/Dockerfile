@@ -63,6 +63,8 @@ RUN addgroup -g 1000 imagemagick \
        sed -i 's/^#if !defined(C_LOSSLESS_SUPPORTED)$/#if !defined(C_LOSSLESS_SUPPORTED) || defined(LIBJPEG_TURBO_VERSION_NUMBER)/' coders/jpeg.c; \
      fi \
   && ./configure --with-perl --with-png \
+  # make newer versions not regenerate `configure` via autoconf (6.9.9/6.9.10 only)
+  && case "${IMAGEMAGICK_VERSION}" in 6.9.9-*|6.9.10-*) touch configure ;; esac \
   && : "${BUILD_CPUS:=$(($(nproc) > 1 ? $(nproc) / 2 : 1))}" \
   && echo "BUILD_CPUS=${BUILD_CPUS}" \
   && echo "make -j${BUILD_CPUS}" \
