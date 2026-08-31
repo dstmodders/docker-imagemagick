@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Output versions from the tags API
         id: versions
         env:
@@ -44,7 +44,7 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       - name: Restore last checked versions from cache
         id: cache
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .check-for-updates.txt
           key: check-for-updates-${{ steps.versions.outputs.latest7 }}-${{ steps.versions.outputs.latest6 }}
@@ -87,7 +87,7 @@ jobs:
             "${{ steps.versions.outputs.latest7 }}" \
             > .check-for-updates.txt
       - name: Send Slack notification
-        uses: codedsolar/slack-action@v1
+        uses: codedsolar/slack-action@59996e0967dce98cf0f76825cad94daa7e6d4936 # v1.4.0
         if: ${{ steps.compare.outputs.has-updates == 'true' }}
         with:
           fields: |
