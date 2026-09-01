@@ -55,7 +55,16 @@ RUN addgroup -g 1000 imagemagick \
     "https://github.com/ImageMagick/ImageMagick$([ "$(printf '%s' "${IMAGEMAGICK_VERSION}" | cut -c 1)" -eq '6' ] && echo '6').git" \
     /tmp/ImageMagick/ \
   && cd /tmp/ImageMagick/ \
+  # patch coders/jpeg.c for libjpeg-turbo 3.x compatibility (older versions only)
+  && if grep -q '^#if defined(D_LOSSLESS_SUPPORTED)$' coders/jpeg.c; then \
+       sed -i 's/^#if defined(D_LOSSLESS_SUPPORTED)$/#if !defined(LIBJPEG_TURBO_VERSION_NUMBER) \&\& defined(D_LOSSLESS_SUPPORTED)/' coders/jpeg.c; \
+     fi \
+  && if grep -q '^#if !defined(C_LOSSLESS_SUPPORTED)$' coders/jpeg.c; then \
+       sed -i 's/^#if !defined(C_LOSSLESS_SUPPORTED)$/#if !defined(C_LOSSLESS_SUPPORTED) || defined(LIBJPEG_TURBO_VERSION_NUMBER)/' coders/jpeg.c; \
+     fi \
   && ./configure --with-perl --with-png \
+  # make newer versions not regenerate `configure` via autoconf (6.9.9/6.9.10 only)
+  && case "${IMAGEMAGICK_VERSION}" in 6.9.9-*|6.9.10-*) touch configure ;; esac \
   && : "${BUILD_CPUS:=$(($(nproc) > 1 ? $(nproc) / 2 : 1))}" \
   && echo "BUILD_CPUS=${BUILD_CPUS}" \
   && echo "make -j${BUILD_CPUS}" \

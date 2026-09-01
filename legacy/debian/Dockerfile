@@ -46,6 +46,8 @@ RUN groupadd --gid 1000 imagemagick \
     /tmp/ImageMagick/ \
   && cd /tmp/ImageMagick/ \
   && ./configure --with-perl --with-png \
+  # make newer versions not regenerate `configure` via autoconf (6.9.9/6.9.10 only)
+  && case "${IMAGEMAGICK_VERSION}" in 6.9.9-*|6.9.10-*) touch configure ;; esac \
   && : "${BUILD_CPUS:=$(($(nproc) > 1 ? $(nproc) / 2 : 1))}" \
   && echo "BUILD_CPUS=${BUILD_CPUS}" \
   && echo "make -j${BUILD_CPUS}" \
