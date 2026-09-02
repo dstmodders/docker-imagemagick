@@ -45,6 +45,11 @@ RUN groupadd --gid 1000 imagemagick \
     "https://github.com/ImageMagick/ImageMagick$([ "$(printf '%s' "${IMAGEMAGICK_VERSION}" | cut -c 1)" -eq '6' ] && echo '6').git" \
     /tmp/ImageMagick/ \
   && cd /tmp/ImageMagick/ \
+  # patch PerlMagick/quantum/quantum.xs.in so 32-bit builds compile when Quantum is double (7.0.10 only)
+  && case "${IMAGEMAGICK_VERSION}" in 7.0.10-*) sed -i \
+       -e '0,/pixels=(float \*) GetVirtualMemoryBlob(pixels_info);/b' \
+       -e 's/pixels=(float \*) GetVirtualMemoryBlob(pixels_info);/pixels=(Quantum *) GetVirtualMemoryBlob(pixels_info);/' \
+       PerlMagick/quantum/quantum.xs.in ;; esac \
   && ./configure --with-perl --with-png \
   && : "${BUILD_CPUS:=$(($(nproc) > 1 ? $(nproc) / 2 : 1))}" \
   && echo "BUILD_CPUS=${BUILD_CPUS}" \
