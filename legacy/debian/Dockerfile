@@ -52,6 +52,12 @@ RUN groupadd --gid 1000 imagemagick \
        -e 's/cos_theta != (double \*) NULL/cos_theta != (MagickRealType *) NULL/' \
        -e 's/sin_theta != (double \*) NULL/sin_theta != (MagickRealType *) NULL/' \
        magick/effect.c ;; esac \
+  # patch magick/segment.c so 32-bit builds compile when MagickRealType is long double (6.9.10 only)
+  && case "${IMAGEMAGICK_VERSION}" in 6.9.10-*) sed -i \
+       -e 's/squares != (double \*) NULL/squares != (MagickRealType *) NULL/' \
+       -e 's/free_squares=(double \*) RelinquishMagickMemory(free_squares);/free_squares=(MagickRealType *) RelinquishMagickMemory(free_squares);/' \
+       -e 's/squares=(double \*) NULL;/squares=(MagickRealType *) NULL;/' \
+       magick/segment.c ;; esac \
   && ./configure --with-perl --with-png \
   # make newer versions not regenerate `configure` via autoconf (6.9.9/6.9.10 only)
   && case "${IMAGEMAGICK_VERSION}" in 6.9.9-*|6.9.10-*) touch configure ;; esac \
