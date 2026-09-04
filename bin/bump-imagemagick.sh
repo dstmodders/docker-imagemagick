@@ -29,9 +29,9 @@ set -euo pipefail
 
 # define constants
 BASE_DIR="$(cd "$(dirname "$0")" && pwd)"
-DOCKERHUB_START_LINE=10
+DOCKERHUB_START_LINE=38
 JSON="$(cat "${BASE_DIR}/../versions.json")"
-README_START_LINE=17
+README_START_LINE=47
 
 readonly BASE_DIR
 readonly DOCKERHUB_START_LINE
