@@ -164,7 +164,7 @@ print_url() {
   local commit="$2"
   local directory="$3"
   local url="[${tags}](${REPOSITORY}/blob/${commit}/${directory}/Dockerfile)"
-  printf '- %s\n' "${url}"
+  printf -- '- %s\n' "${url}"
 }
 
 # reference: 7.1.2-30-alpine, 7.1.2-30, alpine, latest
