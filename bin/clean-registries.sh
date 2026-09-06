@@ -57,10 +57,11 @@ ARG_REGISTRY=''
 FLAG_DRY_RUN=0
 FLAG_YES=0
 
-# define state
+# define other global variables
 BLUE_TAGS=()
 EXTRA_TAGS=()
 KEEP_TAGS=()
+REGISTRY_TAGS=()
 
 usage() {
   awk '
@@ -460,9 +461,6 @@ dockerhub_delete_tag() {
     "https://hub.docker.com/v2/repositories/${REPOSITORY}/tags/${tag}/"
 }
 
-# shared
-REGISTRY_TAGS=()
-
 run_cleanup() {
   local status
 
@@ -559,9 +557,6 @@ clean_dockerhub() {
 }
 
 cd "${BASE_DIR}/.." || exit 1
-
-# parse arguments
-ARG_REGISTRY=''
 
 while [ $# -gt 0 ]; do
   key="$1"
