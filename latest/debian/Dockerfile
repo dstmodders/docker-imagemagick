@@ -18,8 +18,8 @@ RUN groupadd --gid 1000 imagemagick \
     libzip-dev='1.11.3-2' \
     pkg-config='1.8.1-4' \
     # Perl
-    libperl-dev='5.40.1-6' \
-    libperl5.40='5.40.1-6' \
+    libperl-dev='5.40.1-6+deb13u1' \
+    libperl5.40='5.40.1-6+deb13u1' \
     # Fonts
     fonts-dejavu='2.37-8' \
     libfontconfig1-dev='2.15.0-2.3' \
