@@ -15,7 +15,7 @@ RUN addgroup -g 1000 imagemagick \
     libstdc++='15.2.0-r5' \
     libzip-dev='1.11.4-r2' \
     # Perl
-    perl='5.42.2-r0' \
+    perl='5.42.2-r1' \
     # Fonts
     font-dejavu='2.37-r6' \
     fontconfig='2.17.1-r1' \
@@ -38,7 +38,7 @@ RUN addgroup -g 1000 imagemagick \
     make='4.4.1-r4' \
     musl-dev='1.2.6-r2' \
     # Perl
-    perl-dev='5.42.2-r0' \
+    perl-dev='5.42.2-r1' \
     # Fonts
     fontconfig-dev='2.17.1-r1' \
     freetype-dev='2.14.3-r0' \
