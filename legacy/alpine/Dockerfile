@@ -23,9 +23,9 @@ RUN addgroup -g 1000 imagemagick \
     # JPEG
     libjpeg-turbo='3.1.3-r0' \
     # PNG
-    libpng='1.6.58-r1' \
+    libpng='1.6.59-r0' \
     # TIFF
-    tiff='4.7.1-r0' \
+    tiff='4.7.2-r0' \
     # WebP
     libwebp='1.6.0-r0' \
     libwebpdemux='1.6.0-r0' \
@@ -45,9 +45,9 @@ RUN addgroup -g 1000 imagemagick \
     # JPEG
     libjpeg-turbo-dev='3.1.3-r0' \
     # PNG
-    libpng-dev='1.6.58-r1' \
+    libpng-dev='1.6.59-r0' \
     # TIFF
-    tiff-dev='4.7.1-r0' \
+    tiff-dev='4.7.2-r0' \
     # WebP
     libwebp-dev='1.6.0-r0' \
   # ImageMagick
