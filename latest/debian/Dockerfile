@@ -30,8 +30,8 @@ RUN groupadd --gid 1000 imagemagick \
     libjpeg62-turbo-dev='1:2.1.5-4' \
     libjpeg62-turbo='1:2.1.5-4' \
     # PNG
-    libpng-dev='1.6.48-1+deb13u5' \
-    libpng16-16t64='1.6.48-1+deb13u5' \
+    libpng-dev='1.6.48-1+deb13u6' \
+    libpng16-16t64='1.6.48-1+deb13u6' \
     # TIFF \
     libtiff-dev='4.7.0-3+deb13u3' \
     libtiff6='4.7.0-3+deb13u3' \
