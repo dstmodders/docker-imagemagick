@@ -49,12 +49,6 @@ NO_COLOR="${NO_COLOR:-0}"
 FLAG_COMMIT=0
 FLAG_DRY_RUN=0
 
-print_step_failed() {
-  local value="${1:-Failed}"
-  print_bold_color 1 "${value}"
-  printf '\n'
-}
-
 version_exists() {
   local repo="$1"
   local version="$2"
@@ -153,7 +147,7 @@ done
 readonly FLAG_COMMIT
 readonly FLAG_DRY_RUN
 
-if ! command -v curl > /dev/null 2>&1; then
+if ! is_installed curl; then
   die 'curl is required'
 fi
 
