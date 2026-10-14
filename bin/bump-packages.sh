@@ -451,7 +451,7 @@ readonly FLAG_LIST
 trap interrupt SIGINT
 
 if [ "${FLAG_LIST}" -eq 0 ]; then
-  if ! command -v docker > /dev/null 2>&1; then
+  if ! is_installed docker; then
     die 'Docker CLI is not installed'
   fi
 
@@ -459,7 +459,7 @@ if [ "${FLAG_LIST}" -eq 0 ]; then
     die 'Docker daemon is not running'
   fi
 
-  if ! command -v curl > /dev/null 2>&1; then
+  if ! is_installed curl; then
     die 'curl is required'
   fi
 

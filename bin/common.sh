@@ -23,16 +23,40 @@ usage() {
   ' "$0"
 }
 
-print_bold_color() {
-  local color="$1"
-  local value="$2"
-  local output="${3:-1}"
+_print_style() {
+  local mode="$1"
+  local color="${2:-}"
+  local value="$3"
+  local output="${4:-1}"
+  local style=''
 
   if [ "${NO_COLOR}" = '1' ] || ! [ -t "${output}" ]; then
     printf '%s' "${value}" >&"${output}"
-  else
-    printf "$(tput bold)$(tput setaf "${color}")%s$(tput sgr0)" "${value}" >&"${output}"
+    return
   fi
+
+  case "${mode}" in
+    bold) style="$(tput bold)" ;;
+    dim) style="$(tput dim)" ;;
+  esac
+
+  if [ -n "${color}" ]; then
+    style="${style}$(tput setaf "${color}")"
+  fi
+
+  printf '%s%s%s' "${style}" "${value}" "$(tput sgr0)" >&"${output}"
+}
+
+print_bold_color() {
+  _print_style 'bold' "$1" "$2" "${3:-1}"
+}
+
+print_dim() {
+  _print_style 'dim' '' "$1" "${2:-1}"
+}
+
+print_dim_color() {
+  _print_style 'dim' "$1" "$2" "${3:-1}"
 }
 
 print_error() {
@@ -48,7 +72,7 @@ die() {
 }
 
 print_separator() {
-  print_bold_color 0 '---'
+  print_dim '---'
   printf '\n'
 }
 
@@ -99,4 +123,14 @@ print_step_skipped() {
   local value="${1:-Skipped}"
   print_bold_color 3 "${value}"
   printf '\n'
+}
+
+print_step_failed() {
+  local value="${1:-Failed}"
+  print_bold_color 1 "${value}"
+  printf '\n'
+}
+
+is_installed() {
+  command -v "$1" > /dev/null 2>&1
 }
