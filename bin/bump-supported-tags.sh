@@ -69,7 +69,7 @@ print_url() {
   printf -- '- %s\n' "${url}"
 }
 
-# reference: 7.1.2-33-alpine, 7.1.2-33, alpine, latest
+# reference: 7.1.2-34-alpine, 7.1.2-34, alpine, latest
 print_latest_tags() {
   for key in "${LATEST_VERSIONS_KEYS[@]}"; do
     for dist in "${DISTS[@]}"; do
