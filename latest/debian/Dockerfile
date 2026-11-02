@@ -12,7 +12,7 @@ RUN groupadd --gid 1000 imagemagick \
   && apt-get update \
   && apt-get install -y --no-install-recommends \
     build-essential='12.12' \
-    ca-certificates='20250419' \
+    ca-certificates='20250419+deb13u1' \
     git='1:2.47.3-0+deb13u1' \
     libgomp1='14.2.0-19' \
     libzip-dev='1.11.3-2' \
