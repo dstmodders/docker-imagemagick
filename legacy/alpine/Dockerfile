@@ -36,7 +36,7 @@ RUN addgroup -g 1000 imagemagick \
     g++='15.2.0-r5' \
     git='2.54.0-r0' \
     make='4.4.1-r4' \
-    musl-dev='1.2.6-r2' \
+    musl-dev='1.2.6-r3' \
     # Perl
     perl-dev='5.42.2-r1' \
     # Fonts
