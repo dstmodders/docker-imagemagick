@@ -27,7 +27,10 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
+      latest: ${{ steps.set-matrix.outputs.latest }}
+      legacy: ${{ steps.set-matrix.outputs.legacy }}
+      latest-fields-pending: ${{ steps.set-matrix.outputs.latest-fields-pending }}
+      legacy-fields-pending: ${{ steps.set-matrix.outputs.legacy-fields-pending }}
     steps:
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -35,14 +38,16 @@ jobs:
         id: set-matrix
         run: |
           json="$(cat ./versions.json)"
-          matrix="$(jq -cM '
-            (
-              [ .latest[] | { version: .version, family: "latest", latest: (.latest // false) } ]
-              +
-              [ .legacy[] | { version: .version, family: "legacy", latest: (.latest // false) } ]
-            )
-          ' <<< "$json")"
-          echo "matrix=${matrix}" >> "$GITHUB_OUTPUT"
+          {
+            echo "latest=$(jq -cM '[ .latest[] | { version: .version, family: "latest", latest: (.latest // false) } ]' <<< "$json")"
+            echo "legacy=$(jq -cM '[ .legacy[] | { version: .version, family: "legacy", latest: (.latest // false) } ]' <<< "$json")"
+            echo "latest-fields-pending<<EOF"
+            jq -r '.latest[] | "ImageMagick \(.version): Pending..."' <<< "$json"
+            echo "EOF"
+            echo "legacy-fields-pending<<EOF"
+            jq -r '.legacy[] | "ImageMagick \(.version): Pending..."' <<< "$json"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
   changes:
     runs-on: ubuntu-latest
@@ -179,26 +184,53 @@ jobs:
           status: ${{ job.status }}
           timestamp: ${{ steps.slack.outputs.slack-timestamp }}
 
-  build:
-    needs: [changes, prepare]
+  build-latest-notify:
+    needs: [changes, prepare, build-legacy-notify]
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.docker == 'true' }}
-    strategy:
-      matrix:
-        image: ${{ fromJSON(needs.prepare.outputs.matrix) }}
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.docker == 'true') }}
+    outputs:
+      slack-timestamp: ${{ steps.slack.outputs.slack-timestamp }}
     steps:
-      - name: Check out
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Send Slack notification
-        uses: codedsolar/slack-action@d8cb36ec61bca64402118bb908f2fe351a6d3f25 # v1.4.1
-        if: ${{ github.event_name != 'pull_request' }}
+        uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         id: slack
         with:
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-latest> job in {GITHUB_REF} by {GITHUB_ACTOR}
           fields: |
             {STATUS}
             {REF}
-            ImageMagick version: ${{ matrix.image.version }}
+            ${{ needs.prepare.outputs.latest-fields-pending }}
           status: in-progress
+
+  build-legacy-notify:
+    needs: [changes, prepare]
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name != 'pull_request' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.docker == 'true') }}
+    outputs:
+      slack-timestamp: ${{ steps.slack.outputs.slack-timestamp }}
+    steps:
+      - name: Send Slack notification
+        uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
+        id: slack
+        with:
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-legacy> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          fields: |
+            {STATUS}
+            {REF}
+            ${{ needs.prepare.outputs.legacy-fields-pending }}
+          status: in-progress
+
+  build-latest:
+    needs: [changes, prepare, build-latest-notify]
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.prepare.result == 'success' && needs.changes.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.docker == 'true') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.prepare.outputs.latest) }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
       - name: Build a Debian image
@@ -206,53 +238,222 @@ jobs:
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           context: .
-          file: ./${{ matrix.image.family }}/debian/Dockerfile
+          file: ./latest/debian/Dockerfile
           labels: maintainer=victor@popkov.me
           load: true
           platforms: linux/amd64
           pull: true
           push: false
           tags: |
-            ${{ matrix.image.family }}-${{ matrix.image.version }}-debian
+            latest-${{ matrix.image.version }}-debian
       - name: Build an Alpine image
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
           context: .
-          file: ./${{ matrix.image.family }}/alpine/Dockerfile
+          file: ./latest/alpine/Dockerfile
           labels: maintainer=victor@popkov.me
           load: true
           platforms: linux/amd64
           pull: true
           push: false
           tags: |
-            ${{ matrix.image.family }}-${{ matrix.image.version }}-alpine
+            latest-${{ matrix.image.version }}-alpine
       - name: Tag Alpine image
         if: ${{ matrix.image.latest }}
-        run: docker tag ${{ matrix.image.family }}-${{ matrix.image.version }}-alpine ${{ matrix.image.family }}
+        run: docker tag latest-${{ matrix.image.version }}-alpine latest
       - name: Save Alpine image
         if: ${{ matrix.image.latest }}
-        run: docker save -o ./ci-${{ matrix.image.family }}-alpine.tar ${{ matrix.image.family }}
+        run: docker save -o ./ci-latest-alpine.tar latest
       - name: Upload Alpine image
         if: ${{ matrix.image.latest }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: ci-${{ matrix.image.family }}-alpine-${{ github.run_id }}
-          path: ci-${{ matrix.image.family }}-alpine.tar
+          name: ci-latest-alpine-${{ github.run_id }}
+          path: ci-latest-alpine.tar
           retention-days: 1
       - name: Update Slack notification
-        uses: codedsolar/slack-action@d8cb36ec61bca64402118bb908f2fe351a6d3f25 # v1.4.1
-        if: ${{ github.event_name != 'pull_request' && always() }}
+        uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
+        if: ${{ always() && needs.build-latest-notify.outputs.slack-timestamp != '' }}
+        continue-on-error: true
         with:
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-latest> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          fields-mode: merge
+          ignore-failures: true
+          preserve-color: true
+          fields: |
+            ImageMagick ${{ matrix.image.version }}: ${{ job.status == 'success' && 'Success' || job.status == 'cancelled' && 'Cancelled' || job.status == 'skipped' && 'Skipped' || 'Failure' }}
+          timestamp: ${{ needs.build-latest-notify.outputs.slack-timestamp }}
+      - name: Save Slack field outcome
+        if: ${{ always() }}
+        run: |
+          case "${{ job.status }}" in
+            success) value=Success ;;
+            cancelled) value=Cancelled ;;
+            skipped) value=Skipped ;;
+            *) value=Failure ;;
+          esac
+          mkdir -p .slack-field
+          printf 'ImageMagick %s: %s\n' \
+            '${{ matrix.image.version }}' \
+            "$value" > .slack-field/field.txt
+      - name: Upload Slack field outcome
+        if: ${{ always() && needs.build-latest-notify.outputs.slack-timestamp != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: slack-field-ci-build-latest-${{ matrix.image.version }}
+          path: .slack-field/field.txt
+          if-no-files-found: error
+          retention-days: 1
+
+  build-legacy:
+    needs: [changes, prepare, build-legacy-notify]
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.prepare.result == 'success' && needs.changes.result == 'success' && (github.event_name == 'workflow_dispatch' || needs.changes.outputs.docker == 'true') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ${{ fromJSON(needs.prepare.outputs.legacy) }}
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - name: Build a Debian image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          context: .
+          file: ./legacy/debian/Dockerfile
+          labels: maintainer=victor@popkov.me
+          load: true
+          platforms: linux/amd64
+          pull: true
+          push: false
+          tags: |
+            legacy-${{ matrix.image.version }}-debian
+      - name: Build an Alpine image
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          build-args: IMAGEMAGICK_VERSION=${{ matrix.image.version }}
+          context: .
+          file: ./legacy/alpine/Dockerfile
+          labels: maintainer=victor@popkov.me
+          load: true
+          platforms: linux/amd64
+          pull: true
+          push: false
+          tags: |
+            legacy-${{ matrix.image.version }}-alpine
+      - name: Tag Alpine image
+        if: ${{ matrix.image.latest }}
+        run: docker tag legacy-${{ matrix.image.version }}-alpine legacy
+      - name: Save Alpine image
+        if: ${{ matrix.image.latest }}
+        run: docker save -o ./ci-legacy-alpine.tar legacy
+      - name: Upload Alpine image
+        if: ${{ matrix.image.latest }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ci-legacy-alpine-${{ github.run_id }}
+          path: ci-legacy-alpine.tar
+          retention-days: 1
+      - name: Update Slack notification
+        uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
+        if: ${{ always() && needs.build-legacy-notify.outputs.slack-timestamp != '' }}
+        continue-on-error: true
+        with:
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-legacy> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          fields-mode: merge
+          ignore-failures: true
+          preserve-color: true
+          fields: |
+            ImageMagick ${{ matrix.image.version }}: ${{ job.status == 'success' && 'Success' || job.status == 'cancelled' && 'Cancelled' || job.status == 'skipped' && 'Skipped' || 'Failure' }}
+          timestamp: ${{ needs.build-legacy-notify.outputs.slack-timestamp }}
+      - name: Save Slack field outcome
+        if: ${{ always() }}
+        run: |
+          case "${{ job.status }}" in
+            success) value=Success ;;
+            cancelled) value=Cancelled ;;
+            skipped) value=Skipped ;;
+            *) value=Failure ;;
+          esac
+          mkdir -p .slack-field
+          printf 'ImageMagick %s: %s\n' \
+            '${{ matrix.image.version }}' \
+            "$value" > .slack-field/field.txt
+      - name: Upload Slack field outcome
+        if: ${{ always() && needs.build-legacy-notify.outputs.slack-timestamp != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: slack-field-ci-build-legacy-${{ matrix.image.version }}
+          path: .slack-field/field.txt
+          if-no-files-found: error
+          retention-days: 1
+
+  build-latest-finalize:
+    needs: [build-latest-notify, build-latest]
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.build-latest-notify.result == 'success' }}
+    steps:
+      - name: Download Slack field outcomes
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: slack-field-ci-build-latest-*
+          path: slack-fields
+      - name: Assemble Slack fields
+        id: fields
+        run: |
+          {
+            echo 'fields<<EOF'
+            find slack-fields -type f -name field.txt | sort | while read -r f; do cat "$f"; done
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+      - name: Finalize Slack notification
+        uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
+        with:
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-latest> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          color: ${{ needs.build-latest.result == 'success' && '#24a943' || needs.build-latest.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
           fields: |
             {STATUS}
             {REF}
-            ImageMagick version: ${{ matrix.image.version }}
-          status: ${{ job.status }}
-          timestamp: ${{ steps.slack.outputs.slack-timestamp }}
+            ${{ steps.fields.outputs.fields }}
+          status: ${{ needs.build-latest.result == 'success' && 'success' || needs.build-latest.result == 'cancelled' && 'cancelled' || 'failure' }}
+          timestamp: ${{ needs.build-latest-notify.outputs.slack-timestamp }}
+
+  build-legacy-finalize:
+    needs: [build-legacy-notify, build-legacy]
+    runs-on: ubuntu-latest
+    if: ${{ always() && needs.build-legacy-notify.result == 'success' }}
+    steps:
+      - name: Download Slack field outcomes
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: slack-field-ci-build-legacy-*
+          path: slack-fields
+      - name: Assemble Slack fields
+        id: fields
+        run: |
+          {
+            echo 'fields<<EOF'
+            find slack-fields -type f -name field.txt | sort | while read -r f; do cat "$f"; done
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+      - name: Finalize Slack notification
+        uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
+        with:
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-legacy> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          color: ${{ needs.build-legacy.result == 'success' && '#24a943' || needs.build-legacy.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
+          fields: |
+            {STATUS}
+            {REF}
+            ${{ steps.fields.outputs.fields }}
+          status: ${{ needs.build-legacy.result == 'success' && 'success' || needs.build-legacy.result == 'cancelled' && 'cancelled' || 'failure' }}
+          timestamp: ${{ needs.build-legacy-notify.outputs.slack-timestamp }}
 
   test:
-    needs: [build]
+    needs: [build-latest, build-legacy]
     runs-on: ubuntu-latest
     steps:
       - name: Check out
