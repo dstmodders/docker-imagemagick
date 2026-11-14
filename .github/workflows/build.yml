@@ -44,7 +44,7 @@ jobs:
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
-  legacy-build-notify:
+  build-legacy-notify:
     needs: prepare
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' }}
@@ -55,15 +55,15 @@ jobs:
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         id: slack
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / legacy-build> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-legacy> job in {GITHUB_REF} by {GITHUB_ACTOR}
           fields: |
             {STATUS}
             {REF}
             ${{ needs.prepare.outputs.legacy-fields-pending }}
           status: in-progress
 
-  legacy-build:
-    needs: [prepare, legacy-build-notify]
+  build-legacy:
+    needs: [prepare, build-legacy-notify]
     runs-on: ubuntu-latest
     if: ${{ always() && needs.prepare.result == 'success' }}
     strategy:
@@ -121,16 +121,16 @@ jobs:
             ${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:legacy-${{ matrix.image.version }}-alpine
       - name: Update Slack notification
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
-        if: ${{ always() && needs.legacy-build-notify.outputs.slack-timestamp != '' }}
+        if: ${{ always() && needs.build-legacy-notify.outputs.slack-timestamp != '' }}
         continue-on-error: true
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / legacy-build> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-legacy> job in {GITHUB_REF} by {GITHUB_ACTOR}
           fields-mode: merge
           ignore-failures: true
           preserve-color: true
           fields: |
             ImageMagick ${{ matrix.image.version }}: ${{ job.status == 'success' && 'Success' || job.status == 'cancelled' && 'Cancelled' || job.status == 'skipped' && 'Skipped' || 'Failure' }}
-          timestamp: ${{ needs.legacy-build-notify.outputs.slack-timestamp }}
+          timestamp: ${{ needs.build-legacy-notify.outputs.slack-timestamp }}
       - name: Save Slack field outcome
         if: ${{ always() }}
         run: |
@@ -145,23 +145,23 @@ jobs:
             '${{ matrix.image.version }}' \
             "$value" > .slack-field/field.txt
       - name: Upload Slack field outcome
-        if: ${{ always() && needs.legacy-build-notify.outputs.slack-timestamp != '' }}
+        if: ${{ always() && needs.build-legacy-notify.outputs.slack-timestamp != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: slack-field-legacy-build-${{ matrix.image.version }}
+          name: slack-field-build-legacy-${{ matrix.image.version }}
           path: .slack-field/field.txt
           if-no-files-found: error
           retention-days: 1
 
-  legacy-build-finalize:
-    needs: [legacy-build-notify, legacy-build]
+  build-legacy-finalize:
+    needs: [build-legacy-notify, build-legacy]
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.legacy-build-notify.result == 'success' }}
+    if: ${{ always() && needs.build-legacy-notify.result == 'success' }}
     steps:
       - name: Download Slack field outcomes
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: slack-field-legacy-build-*
+          pattern: slack-field-build-legacy-*
           path: slack-fields
       - name: Assemble Slack fields
         id: fields
@@ -174,16 +174,16 @@ jobs:
       - name: Finalize Slack notification
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / legacy-build> job in {GITHUB_REF} by {GITHUB_ACTOR}
-          color: ${{ needs.legacy-build.result == 'success' && '#24a943' || needs.legacy-build.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-legacy> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          color: ${{ needs.build-legacy.result == 'success' && '#24a943' || needs.build-legacy.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
           fields: |
             {STATUS}
             {REF}
             ${{ steps.fields.outputs.fields }}
-          status: ${{ needs.legacy-build.result == 'success' && 'success' || needs.legacy-build.result == 'cancelled' && 'cancelled' || 'failure' }}
-          timestamp: ${{ needs.legacy-build-notify.outputs.slack-timestamp }}
+          status: ${{ needs.build-legacy.result == 'success' && 'success' || needs.build-legacy.result == 'cancelled' && 'cancelled' || 'failure' }}
+          timestamp: ${{ needs.build-legacy-notify.outputs.slack-timestamp }}
 
-  latest-build-notify:
+  build-latest-notify:
     needs: prepare
     runs-on: ubuntu-latest
     if: ${{ github.event_name != 'pull_request' }}
@@ -194,15 +194,15 @@ jobs:
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         id: slack
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / latest-build> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-latest> job in {GITHUB_REF} by {GITHUB_ACTOR}
           fields: |
             {STATUS}
             {REF}
             ${{ needs.prepare.outputs.latest-fields-pending }}
           status: in-progress
 
-  latest-build:
-    needs: [prepare, latest-build-notify]
+  build-latest:
+    needs: [prepare, build-latest-notify]
     runs-on: ubuntu-latest
     if: ${{ always() && needs.prepare.result == 'success' }}
     strategy:
@@ -260,16 +260,16 @@ jobs:
             ${{ secrets.PRIVATE_REGISTRY_HOST }}/imagemagick:${{ matrix.image.version }}-alpine
       - name: Update Slack notification
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
-        if: ${{ always() && needs.latest-build-notify.outputs.slack-timestamp != '' }}
+        if: ${{ always() && needs.build-latest-notify.outputs.slack-timestamp != '' }}
         continue-on-error: true
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / latest-build> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-latest> job in {GITHUB_REF} by {GITHUB_ACTOR}
           fields-mode: merge
           ignore-failures: true
           preserve-color: true
           fields: |
             ImageMagick ${{ matrix.image.version }}: ${{ job.status == 'success' && 'Success' || job.status == 'cancelled' && 'Cancelled' || job.status == 'skipped' && 'Skipped' || 'Failure' }}
-          timestamp: ${{ needs.latest-build-notify.outputs.slack-timestamp }}
+          timestamp: ${{ needs.build-latest-notify.outputs.slack-timestamp }}
       - name: Save Slack field outcome
         if: ${{ always() }}
         run: |
@@ -284,23 +284,23 @@ jobs:
             '${{ matrix.image.version }}' \
             "$value" > .slack-field/field.txt
       - name: Upload Slack field outcome
-        if: ${{ always() && needs.latest-build-notify.outputs.slack-timestamp != '' }}
+        if: ${{ always() && needs.build-latest-notify.outputs.slack-timestamp != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: slack-field-latest-build-${{ matrix.image.version }}
+          name: slack-field-build-latest-${{ matrix.image.version }}
           path: .slack-field/field.txt
           if-no-files-found: error
           retention-days: 1
 
-  latest-build-finalize:
-    needs: [latest-build-notify, latest-build]
+  build-latest-finalize:
+    needs: [build-latest-notify, build-latest]
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.latest-build-notify.result == 'success' }}
+    if: ${{ always() && needs.build-latest-notify.result == 'success' }}
     steps:
       - name: Download Slack field outcomes
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: slack-field-latest-build-*
+          pattern: slack-field-build-latest-*
           path: slack-fields
       - name: Assemble Slack fields
         id: fields
@@ -313,17 +313,17 @@ jobs:
       - name: Finalize Slack notification
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / latest-build> job in {GITHUB_REF} by {GITHUB_ACTOR}
-          color: ${{ needs.latest-build.result == 'success' && '#24a943' || needs.latest-build.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / build-latest> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          color: ${{ needs.build-latest.result == 'success' && '#24a943' || needs.build-latest.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
           fields: |
             {STATUS}
             {REF}
             ${{ steps.fields.outputs.fields }}
-          status: ${{ needs.latest-build.result == 'success' && 'success' || needs.latest-build.result == 'cancelled' && 'cancelled' || 'failure' }}
-          timestamp: ${{ needs.latest-build-notify.outputs.slack-timestamp }}
+          status: ${{ needs.build-latest.result == 'success' && 'success' || needs.build-latest.result == 'cancelled' && 'cancelled' || 'failure' }}
+          timestamp: ${{ needs.build-latest-notify.outputs.slack-timestamp }}
 
-  legacy-push-notify:
-    needs: [prepare, legacy-build]
+  push-legacy-notify:
+    needs: [prepare, build-legacy]
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
     outputs:
@@ -333,17 +333,17 @@ jobs:
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         id: slack
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / legacy-push> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / push-legacy> job in {GITHUB_REF} by {GITHUB_ACTOR}
           fields: |
             {STATUS}
             {REF}
             ${{ needs.prepare.outputs.legacy-fields-pending }}
           status: in-progress
 
-  legacy-push:
-    needs: [prepare, legacy-build, legacy-push-notify]
+  push-legacy:
+    needs: [prepare, build-legacy, push-legacy-notify]
     runs-on: ubuntu-latest
-    if: ${{ always() && github.ref == 'refs/heads/main' && needs.legacy-build.result == 'success' }}
+    if: ${{ always() && github.ref == 'refs/heads/main' && needs.build-legacy.result == 'success' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -433,16 +433,16 @@ jobs:
           tags: ${{ steps.alpine-meta.outputs.tags }}
       - name: Update Slack notification
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
-        if: ${{ always() && needs.legacy-push-notify.outputs.slack-timestamp != '' }}
+        if: ${{ always() && needs.push-legacy-notify.outputs.slack-timestamp != '' }}
         continue-on-error: true
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / legacy-push> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / push-legacy> job in {GITHUB_REF} by {GITHUB_ACTOR}
           fields-mode: merge
           ignore-failures: true
           preserve-color: true
           fields: |
             ImageMagick ${{ matrix.image.version }}: ${{ job.status == 'success' && 'Success' || job.status == 'cancelled' && 'Cancelled' || job.status == 'skipped' && 'Skipped' || 'Failure' }}
-          timestamp: ${{ needs.legacy-push-notify.outputs.slack-timestamp }}
+          timestamp: ${{ needs.push-legacy-notify.outputs.slack-timestamp }}
       - name: Save Slack field outcome
         if: ${{ always() }}
         run: |
@@ -457,23 +457,23 @@ jobs:
             '${{ matrix.image.version }}' \
             "$value" > .slack-field/field.txt
       - name: Upload Slack field outcome
-        if: ${{ always() && needs.legacy-push-notify.outputs.slack-timestamp != '' }}
+        if: ${{ always() && needs.push-legacy-notify.outputs.slack-timestamp != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: slack-field-legacy-push-${{ matrix.image.version }}
+          name: slack-field-push-legacy-${{ matrix.image.version }}
           path: .slack-field/field.txt
           if-no-files-found: error
           retention-days: 1
 
-  legacy-push-finalize:
-    needs: [legacy-push-notify, legacy-push]
+  push-legacy-finalize:
+    needs: [push-legacy-notify, push-legacy]
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.legacy-push-notify.result == 'success' }}
+    if: ${{ always() && needs.push-legacy-notify.result == 'success' }}
     steps:
       - name: Download Slack field outcomes
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: slack-field-legacy-push-*
+          pattern: slack-field-push-legacy-*
           path: slack-fields
       - name: Assemble Slack fields
         id: fields
@@ -486,17 +486,17 @@ jobs:
       - name: Finalize Slack notification
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / legacy-push> job in {GITHUB_REF} by {GITHUB_ACTOR}
-          color: ${{ needs.legacy-push.result == 'success' && '#24a943' || needs.legacy-push.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / push-legacy> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          color: ${{ needs.push-legacy.result == 'success' && '#24a943' || needs.push-legacy.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
           fields: |
             {STATUS}
             {REF}
             ${{ steps.fields.outputs.fields }}
-          status: ${{ needs.legacy-push.result == 'success' && 'success' || needs.legacy-push.result == 'cancelled' && 'cancelled' || 'failure' }}
-          timestamp: ${{ needs.legacy-push-notify.outputs.slack-timestamp }}
+          status: ${{ needs.push-legacy.result == 'success' && 'success' || needs.push-legacy.result == 'cancelled' && 'cancelled' || 'failure' }}
+          timestamp: ${{ needs.push-legacy-notify.outputs.slack-timestamp }}
 
-  latest-push-notify:
-    needs: [prepare, latest-build, legacy-push]
+  push-latest-notify:
+    needs: [prepare, build-latest, push-legacy]
     runs-on: ubuntu-latest
     if: ${{ github.ref == 'refs/heads/main' && github.event_name != 'pull_request' }}
     outputs:
@@ -506,17 +506,17 @@ jobs:
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         id: slack
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / latest-push> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / push-latest> job in {GITHUB_REF} by {GITHUB_ACTOR}
           fields: |
             {STATUS}
             {REF}
             ${{ needs.prepare.outputs.latest-fields-pending }}
           status: in-progress
 
-  latest-push:
-    needs: [prepare, latest-build, legacy-push, latest-push-notify]
+  push-latest:
+    needs: [prepare, build-latest, push-legacy, push-latest-notify]
     runs-on: ubuntu-latest
-    if: ${{ always() && github.ref == 'refs/heads/main' && needs.latest-build.result == 'success' && needs.legacy-push.result == 'success' }}
+    if: ${{ always() && github.ref == 'refs/heads/main' && needs.build-latest.result == 'success' && needs.push-legacy.result == 'success' }}
     strategy:
       fail-fast: false
       max-parallel: 1
@@ -602,16 +602,16 @@ jobs:
           tags: ${{ steps.alpine-meta.outputs.tags }}
       - name: Update Slack notification
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
-        if: ${{ always() && needs.latest-push-notify.outputs.slack-timestamp != '' }}
+        if: ${{ always() && needs.push-latest-notify.outputs.slack-timestamp != '' }}
         continue-on-error: true
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / latest-push> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / push-latest> job in {GITHUB_REF} by {GITHUB_ACTOR}
           fields-mode: merge
           ignore-failures: true
           preserve-color: true
           fields: |
             ImageMagick ${{ matrix.image.version }}: ${{ job.status == 'success' && 'Success' || job.status == 'cancelled' && 'Cancelled' || job.status == 'skipped' && 'Skipped' || 'Failure' }}
-          timestamp: ${{ needs.latest-push-notify.outputs.slack-timestamp }}
+          timestamp: ${{ needs.push-latest-notify.outputs.slack-timestamp }}
       - name: Save Slack field outcome
         if: ${{ always() }}
         run: |
@@ -626,23 +626,23 @@ jobs:
             '${{ matrix.image.version }}' \
             "$value" > .slack-field/field.txt
       - name: Upload Slack field outcome
-        if: ${{ always() && needs.latest-push-notify.outputs.slack-timestamp != '' }}
+        if: ${{ always() && needs.push-latest-notify.outputs.slack-timestamp != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: slack-field-latest-push-${{ matrix.image.version }}
+          name: slack-field-push-latest-${{ matrix.image.version }}
           path: .slack-field/field.txt
           if-no-files-found: error
           retention-days: 1
 
-  latest-push-finalize:
-    needs: [latest-push-notify, latest-push]
+  push-latest-finalize:
+    needs: [push-latest-notify, push-latest]
     runs-on: ubuntu-latest
-    if: ${{ always() && needs.latest-push-notify.result == 'success' }}
+    if: ${{ always() && needs.push-latest-notify.result == 'success' }}
     steps:
       - name: Download Slack field outcomes
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
-          pattern: slack-field-latest-push-*
+          pattern: slack-field-push-latest-*
           path: slack-fields
       - name: Assemble Slack fields
         id: fields
@@ -655,11 +655,11 @@ jobs:
       - name: Finalize Slack notification
         uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         with:
-          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / latest-push> job in {GITHUB_REF} by {GITHUB_ACTOR}
-          color: ${{ needs.latest-push.result == 'success' && '#24a943' || needs.latest-push.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
+          text: GitHub Actions <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|${{ github.workflow }} / push-latest> job in {GITHUB_REF} by {GITHUB_ACTOR}
+          color: ${{ needs.push-latest.result == 'success' && '#24a943' || needs.push-latest.result == 'cancelled' && '#1f242b' || '#cc1f2d' }}
           fields: |
             {STATUS}
             {REF}
             ${{ steps.fields.outputs.fields }}
-          status: ${{ needs.latest-push.result == 'success' && 'success' || needs.latest-push.result == 'cancelled' && 'cancelled' || 'failure' }}
-          timestamp: ${{ needs.latest-push-notify.outputs.slack-timestamp }}
+          status: ${{ needs.push-latest.result == 'success' && 'success' || needs.push-latest.result == 'cancelled' && 'cancelled' || 'failure' }}
+          timestamp: ${{ needs.push-latest-notify.outputs.slack-timestamp }}
