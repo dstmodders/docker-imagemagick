@@ -87,7 +87,7 @@ jobs:
             "${{ steps.versions.outputs.latest7 }}" \
             > .check-for-updates.txt
       - name: Send Slack notification
-        uses: codedsolar/slack-action@d8cb36ec61bca64402118bb908f2fe351a6d3f25 # v1.4.1
+        uses: codedsolar/slack-action@7747edbf087b4facb2726870a34a1f174314b5ae # v1.5.0
         if: ${{ steps.compare.outputs.has-updates == 'true' }}
         with:
           fields: |
