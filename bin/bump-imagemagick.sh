@@ -133,6 +133,9 @@ while [ $# -gt 0 ]; do
   key="$1"
   case "${key}" in
     latest | legacy)
+      if [ -n "${name}" ]; then
+        die 'unexpected argument'
+      fi
       name="${key}"
       ;;
     -c | --commit)
@@ -149,6 +152,9 @@ while [ $# -gt 0 ]; do
       die 'unrecognized flag'
       ;;
     *)
+      if [ -n "${new_version}" ]; then
+        die 'unexpected argument'
+      fi
       new_version="${key}"
       ;;
   esac
