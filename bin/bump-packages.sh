@@ -466,16 +466,10 @@ readonly FLAG_SLEEP_SECONDS
 trap interrupt SIGINT
 
 if [ "${FLAG_LIST}" -eq 0 ]; then
-  if ! is_installed docker; then
-    die 'Docker CLI is not installed'
-  fi
+  require_cmds docker curl
 
   if ! docker info > /dev/null 2>&1; then
     die 'Docker daemon is not running'
-  fi
-
-  if ! is_installed curl; then
-    die 'curl is required'
   fi
 
   print_step_dotted 'Pulling Docker images'

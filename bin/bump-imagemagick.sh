@@ -147,9 +147,7 @@ done
 readonly FLAG_COMMIT
 readonly FLAG_DRY_RUN
 
-if ! is_installed curl; then
-  die 'curl is required'
-fi
+require_cmds curl jq
 
 trap interrupt SIGINT
 

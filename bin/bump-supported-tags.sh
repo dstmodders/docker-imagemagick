@@ -169,6 +169,8 @@ done
 readonly FLAG_COMMIT
 readonly FLAG_DRY_RUN
 
+require_cmds jq
+
 trap interrupt SIGINT
 
 print_step_dotted 'Generating tags'

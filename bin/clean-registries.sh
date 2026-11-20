@@ -490,6 +490,8 @@ if [ -z "${ARG_REGISTRY}" ]; then
   die 'missing registry (expected "ghcr" or "dockerhub")'
 fi
 
+require_cmds curl jq
+
 trap interrupt SIGINT
 
 if [ "${FLAG_YES}" -eq 0 ] && [ "${FLAG_DRY_RUN}" -eq 0 ]; then
