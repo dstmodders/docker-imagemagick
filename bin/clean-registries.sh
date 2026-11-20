@@ -394,7 +394,7 @@ run_cleanup() {
 
   print_separator
 
-  if [ "${#to_delete[@]}" -gt 0 ]; then
+  if [ "${#to_delete[@]}" -gt 0 ] && [ "${FLAG_YES}" -eq 0 ]; then
     print_bold_color 1 'WARNING: you are about to delete tags from the registry'
     printf '\n'
     print_bold_color 1 'Press Ctrl+C to abort. Deleting in 15 seconds...'
@@ -476,6 +476,9 @@ while [ $# -gt 0 ]; do
     ghcr | dockerhub)
       ARG_REGISTRY="${key}"
       ;;
+    -*)
+      die 'unrecognized flag'
+      ;;
     *)
       die 'unexpected argument'
       ;;
@@ -487,13 +490,15 @@ readonly FLAG_DRY_RUN
 readonly FLAG_YES
 
 if [ -z "${ARG_REGISTRY}" ]; then
-  die 'missing registry (expected "ghcr" or "dockerhub")'
+  die "missing registry (expected 'ghcr' or 'dockerhub')"
 fi
+
+require_cmds curl jq
 
 trap interrupt SIGINT
 
 if [ "${FLAG_YES}" -eq 0 ] && [ "${FLAG_DRY_RUN}" -eq 0 ]; then
-  die 'refusing to delete without --yes (or --dry-run)'
+  die "refusing to delete without '--yes' (or '--dry-run')"
 fi
 
 case "${ARG_REGISTRY}" in

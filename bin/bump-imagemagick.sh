@@ -86,13 +86,24 @@ summary() {
 }
 
 replace() {
+  local escaped_old
+  local escaped_new
+
   local dir="$1"
   local old_version="$2"
   local new_version="$3"
 
+  # Escape BRE metacharacters so version dots match literally in sed
+  escape_for_sed() {
+    printf '%s\n' "$1" | sed -e 's/[][\\.*^$/]/\\&/g'
+  }
+
+  escaped_old="$(escape_for_sed "${old_version}")"
+  escaped_new="$(escape_for_sed "${new_version}")"
+
   print_step_dotted 'Replacing'
-  sed -i "${DOCKERHUB_START_LINE},\$s/\`${old_version}\`/\`${new_version}\`/g" ./DOCKERHUB.md
-  sed -i "${README_START_LINE},\$s/\`${old_version}\`/\`${new_version}\`/g" ./README.md
+  sed -i "${DOCKERHUB_START_LINE},\$s/\`${escaped_old}\`/\`${escaped_new}\`/g" ./DOCKERHUB.md
+  sed -i "${README_START_LINE},\$s/\`${escaped_old}\`/\`${escaped_new}\`/g" ./README.md
   jq --indent 2 '
     def semver_key: .version | capture("^(?<major>[0-9]+)\\.(?<minor>[0-9]+)\\.(?<patch>[0-9]+)(?:-(?<release>[0-9]+))?$") | [.major, .minor, .patch, (.release // 0)] | map(tonumber);
     def minor_key: semver_key[0:3];
@@ -107,9 +118,9 @@ replace() {
       | .[-1].latest = true
     )
   ' ./versions.json > ./versions.json.tmp && mv ./versions.json.tmp ./versions.json
-  sed -i "/^# reference:/s/${old_version}/${new_version}/g" ./bin/bump-supported-tags.sh
-  sed -i "s/^ARG IMAGEMAGICK_VERSION=\"${old_version}\"$/ARG IMAGEMAGICK_VERSION=\"${new_version}\"/" "./${dir}/alpine/Dockerfile"
-  sed -i "s/^ARG IMAGEMAGICK_VERSION=\"${old_version}\"$/ARG IMAGEMAGICK_VERSION=\"${new_version}\"/" "./${dir}/debian/Dockerfile"
+  sed -i "/^# reference:/s/${escaped_old}/${escaped_new}/g" ./bin/bump-supported-tags.sh
+  sed -i "s/^ARG IMAGEMAGICK_VERSION=\"${escaped_old}\"$/ARG IMAGEMAGICK_VERSION=\"${escaped_new}\"/" "./${dir}/alpine/Dockerfile"
+  sed -i "s/^ARG IMAGEMAGICK_VERSION=\"${escaped_old}\"$/ARG IMAGEMAGICK_VERSION=\"${escaped_new}\"/" "./${dir}/debian/Dockerfile"
   print_step_success
 }
 
@@ -122,6 +133,9 @@ while [ $# -gt 0 ]; do
   key="$1"
   case "${key}" in
     latest | legacy)
+      if [ -n "${name}" ]; then
+        die 'unexpected argument'
+      fi
       name="${key}"
       ;;
     -c | --commit)
@@ -138,6 +152,9 @@ while [ $# -gt 0 ]; do
       die 'unrecognized flag'
       ;;
     *)
+      if [ -n "${new_version}" ]; then
+        die 'unexpected argument'
+      fi
       new_version="${key}"
       ;;
   esac
@@ -147,9 +164,11 @@ done
 readonly FLAG_COMMIT
 readonly FLAG_DRY_RUN
 
-if ! is_installed curl; then
-  die 'curl is required'
+if [ "${FLAG_COMMIT}" -eq 1 ] && [ "${FLAG_DRY_RUN}" -eq 1 ]; then
+  die "flags '-c' and '-d' cannot be used together"
 fi
+
+require_cmds curl jq
 
 trap interrupt SIGINT
 
