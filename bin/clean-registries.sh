@@ -394,7 +394,7 @@ run_cleanup() {
 
   print_separator
 
-  if [ "${#to_delete[@]}" -gt 0 ]; then
+  if [ "${#to_delete[@]}" -gt 0 ] && [ "${FLAG_YES}" -eq 0 ]; then
     print_bold_color 1 'WARNING: you are about to delete tags from the registry'
     printf '\n'
     print_bold_color 1 'Press Ctrl+C to abort. Deleting in 15 seconds...'
@@ -475,6 +475,9 @@ while [ $# -gt 0 ]; do
       ;;
     ghcr | dockerhub)
       ARG_REGISTRY="${key}"
+      ;;
+    -*)
+      die 'unrecognized flag'
       ;;
     *)
       die 'unexpected argument'
