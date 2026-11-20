@@ -11,11 +11,12 @@
 #   bump-packages.sh -l
 #
 # Flags:
+#   -s, --sleep <seconds>   Sleep the given number of seconds between commits
+#                           (default "0")
+#
 #   -c, --commit            Commit changes
 #   -d, --dry-run           Only check and don't apply or commit any changes
 #   -l, --list              Only list packages and their current versions
-#   -s, --sleep <seconds>   Sleep the given number of seconds between commits
-#                           (default "0")
 #   -h, --help              Show this help message
 #
 # Environment Variables:
