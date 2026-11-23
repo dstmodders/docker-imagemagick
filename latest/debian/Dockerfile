@@ -24,8 +24,8 @@ RUN groupadd --gid 1000 imagemagick \
     fonts-dejavu='2.37-8' \
     libfontconfig1-dev='2.15.0-2.3' \
     libfontconfig1='2.15.0-2.3' \
-    libfreetype-dev='2.13.3+dfsg-1+deb13u1' \
-    libfreetype6='2.13.3+dfsg-1+deb13u1' \
+    libfreetype-dev='2.13.3+dfsg-1+deb13u2' \
+    libfreetype6='2.13.3+dfsg-1+deb13u2' \
     # JPEG
     libjpeg62-turbo-dev='1:2.1.5-4' \
     libjpeg62-turbo='1:2.1.5-4' \
